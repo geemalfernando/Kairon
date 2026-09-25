@@ -1,0 +1,113 @@
+import { ArrowRight, Clock, PackagePlus, TriangleAlert } from 'lucide-react'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Button, Callout, Card, CardHeader, EmptyState, PageHeader, StatusBadge, Timeline } from '../../components/ui'
+import { fmtDate, fmtWindow, greeting } from '../../domain/time'
+import { outletOf, storeOrders, unitsOf } from '../../lib/select'
+import { useSession, useView } from '../../store'
+import { useCutoff } from './NewOrder'
+import { deliveryTimeline, OrderSummary, ReceiptForm, ReportIssueModal, RescheduledCard } from './shared'
+
+export function Dashboard() {
+  const d = useView()
+  const user = useSession((s) => s.user)!
+  const out = outletOf(d, user.assignedOutlet)!
+  const orders = storeOrders(d, out.id)
+  const cutoff = useCutoff()
+  const [reporting, setReporting] = useState(false)
+  // Focus on the order that needs attention most, soonest delivery first.
+  const byDate = [...orders].sort((a, b) => a.deliveryDate.localeCompare(b.deliveryDate) || b.createdAt - a.createdAt)
+  const focus =
+    byDate.find((o) => ['DELIVERED', 'PARTIAL'].includes(o.status)) ??
+    byDate.find((o) => o.status === 'DEFERRED' && o.deferral?.confirmed && !o.deferral.acknowledged) ??
+    byDate.find((o) => ['ARRIVED', 'IN_TRANSIT', 'LOADED', 'FAILED'].includes(o.status)) ??
+    byDate.find((o) => !['RECEIVED', 'DEFERRED'].includes(o.status)) ??
+    orders[0]
+
+  return (
+    <>
+      <PageHeader
+        eyebrow={`${greeting()}, ${user.name}`}
+        title={out.name}
+        subtitle={
+          <>
+            <span className="id">{out.id}</span> · {out.district} · delivery window {fmtWindow(out.window)}
+          </>
+        }
+        actions={
+          <Link to="/store/orders/new">
+            <Button icon={<PackagePlus className="size-4" />}>Create order</Button>
+          </Link>
+        }
+      />
+
+      <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+        <Card>
+          {focus ? (
+            <>
+              <CardHeader eyebrow={focus.status === 'DEFERRED' ? 'Needs your attention' : `Delivery · ${fmtDate(focus.deliveryDate, { weekday: 'long', day: 'numeric', month: 'long' })}`} title={<span className="flex items-center gap-3"><span className="id">{focus.id}</span> <StatusBadge s={focus.status} /></span>} action={<Link to={`/store/orders/${focus.id}`} className="text-sm font-medium text-brand-ink">Details</Link>} />
+              <div className="space-y-6 p-5">
+                {focus.status === 'DEFERRED' && focus.deferral?.confirmed ? (
+                  <RescheduledCard o={focus} />
+                ) : (
+                  <>
+                    <OrderSummary o={focus} />
+                    <div className="text-sm text-muted">{unitsOf(focus)} units · {focus.items.map((i) => `${i.qty} ${i.name}`).join(' · ')}</div>
+                    {focus.shortfall && (
+                      <Callout tone="warning" icon={<TriangleAlert className="size-5" />} title={`${focus.shortfall.missing} × ${focus.shortfall.item} unavailable at loading`}>
+                        {focus.shortfall.decision ? `Dispatcher decision: ${focus.shortfall.decision}.` : 'The dispatcher is deciding how to proceed.'}
+                      </Callout>
+                    )}
+                    {focus.status === 'FAILED' && <Callout tone="critical" title="Delivery attempt failed">{focus.delivery?.notes || 'The driver recorded a failed attempt. The dispatcher will reschedule.'}</Callout>}
+                    {['DELIVERED', 'PARTIAL'].includes(focus.status) ? (
+                      <div className="rounded-xl border border-success/40 p-4">
+                        <ReceiptForm o={focus} />
+                        <button onClick={() => setReporting(true)} className="mt-3 w-full text-center text-sm font-medium text-muted underline">
+                          Something wrong? Report an issue
+                        </button>
+                      </div>
+                    ) : (
+                      <Timeline items={deliveryTimeline(focus)} />
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          ) : (
+            <EmptyState icon={<PackagePlus className="size-5" />} title="No orders yet" body="Create your first order before today’s cutoff." />
+          )}
+        </Card>
+
+        <div className="space-y-6">
+          <Card className="p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Clock className="size-4 text-attention" /> Order cutoff · today 16:00
+            </div>
+            <div className="mt-2 font-display text-4xl font-semibold tabular-nums">{cutoff.passed ? 'Closed' : cutoff.label}</div>
+            <p className="mt-1 text-sm text-muted">{cutoff.passed ? `New orders are delivered ${fmtDate(cutoff.deliveryDate, { weekday: 'long', day: 'numeric', month: 'long' })}.` : 'Time remaining to order for tomorrow.'}</p>
+            <Link to="/store/orders/new" className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-brand-ink">
+              New order <ArrowRight className="size-4" />
+            </Link>
+          </Card>
+          <Card>
+            <CardHeader title="Recent orders" action={<Link to="/store/orders" className="text-sm font-medium text-brand-ink">All</Link>} />
+            <ul className="divide-y divide-line">
+              {orders.slice(0, 5).map((o) => (
+                <li key={o.id}>
+                  <Link to={`/store/orders/${o.id}`} className="flex items-center justify-between px-5 py-3 hover:bg-surface-2">
+                    <span>
+                      <span className="id">{o.id}</span>
+                      <span className="block text-xs text-muted">{fmtDate(o.deliveryDate)} · {unitsOf(o)} units</span>
+                    </span>
+                    <StatusBadge s={o.status} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        </div>
+      </div>
+      <ReportIssueModal key={focus?.id} o={focus} open={reporting} onClose={() => setReporting(false)} />
+    </>
+  )
+}
