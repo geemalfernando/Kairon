@@ -2,6 +2,7 @@ import { ArrowLeft, Check, CheckCircle2, CloudOff, MapPin, Phone, TriangleAlert 
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { PhotoCapture, SignaturePad } from '../../components/ProofCapture'
+import { directionsUrl, LocationMap } from '../../components/RouteMap'
 import { Badge, Button, Callout, Card, ChoiceList, EmptyState, Field, Input, Textarea, toast } from '../../components/ui'
 import { fmtClock, fmtMin, fmtWindow } from '../../domain/time'
 import type { DeliveryRecord } from '../../domain/types'
@@ -13,7 +14,7 @@ type Outcome = DeliveryRecord['outcome']
 
 export function Stop() {
   const { orderId } = useParams()
-  const { trip, stops } = useDriverRoute()
+  const { trip, stops, vehicle } = useDriverRoute()
   const record = useDevice((s) => s.record)
   const net = useNetwork()
   const navigate = useNavigate()
@@ -101,6 +102,13 @@ export function Stop() {
             <Info label="Window" value={fmtWindow(outlet.window)} />
             <Info label="Items" value={`${unitsOf(o)}`} />
           </div>
+          <LocationMap outlet={outlet} depot={vehicle.depot} className="mt-4 h-44" />
+          <a href={directionsUrl(outlet)} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-sm font-semibold text-brand-ink underline">
+            Directions on OpenStreetMap
+          </a>
+          {o.brand === 'Fresh' && (
+            <p className="mt-3 rounded-lg bg-attention-soft px-3 py-2 text-sm font-semibold text-attention-ink">Fresh delivery · must be received before 08:00</p>
+          )}
           {plan.late && <WindowClosed windowEnd={outlet.window[1]} />}
           <Button size="xl" block className="mt-5" disabled={paused || trip.status !== 'IN_PROGRESS'} onClick={arrive}>
             I’ve arrived

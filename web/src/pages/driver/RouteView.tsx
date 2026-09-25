@@ -1,6 +1,6 @@
 import { Check, Clock, Navigation, Route as RouteIcon, TriangleAlert } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { RouteMap } from '../../components/RouteMap'
+import { directionsUrl, RouteMap } from '../../components/RouteMap'
 import { Badge, Button, Callout, Card, cn, EmptyState, StatusBadge } from '../../components/ui'
 import { fmtMin, fmtWindow } from '../../domain/time'
 import { isDone } from '../../lib/select'
@@ -59,7 +59,7 @@ export function RouteView() {
               </Callout>
             )}
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(next.outlet.name + ' Sri Lanka')}`} target="_blank" rel="noreferrer">
+              <a href={directionsUrl(next.outlet)} target="_blank" rel="noreferrer">
                 <Button variant="secondary" size="xl" block icon={<Navigation className="size-5" />}>
                   Navigate
                 </Button>

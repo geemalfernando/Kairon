@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AuditTimeline } from '../../components/AuditTimeline'
 import { PhotoCapture } from '../../components/ProofCapture'
+import { RouteMap } from '../../components/RouteMap'
 import { Badge, Button, Callout, Card, CardHeader, ChoiceList, cn, EmptyState, Modal, PageHeader, Segmented, SeverityBadge, Stat, toast } from '../../components/ui'
 import { isReefer, vehicleLabel } from '../../domain/seed'
 import { fmtMin, greeting, timeAgo } from '../../domain/time'
@@ -228,6 +229,12 @@ export function Load() {
           </Button>
         </div>
       </div>
+      <Card className="mt-6">
+        <CardHeader title="On the road" eyebrow="Delivery order — stop 1 comes off first" />
+        <div className="p-4">
+          <RouteMap className="h-72" routes={[{ id: t.id, depot: v.depot, stops: orders.map((o) => ({ outlet: outletOf(d, o.outletId)!, state: 'todo' as const })) }]} />
+        </div>
+      </Card>
       {short && <ShortfallModal {...short} onClose={() => setShort(null)} />}
     </>
   )

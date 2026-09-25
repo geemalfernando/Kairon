@@ -42,6 +42,12 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         runtimeCaching: [
           {
+            // Map tiles the driver has already seen stay available without signal.
+            urlPattern: ({ url }) => url.host === 'tile.openstreetmap.org',
+            handler: 'CacheFirst',
+            options: { cacheName: 'osm-tiles', expiration: { maxEntries: 600, maxAgeSeconds: 60 * 60 * 24 * 14 }, cacheableResponse: { statuses: [0, 200] } },
+          },
+          {
             urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com',
             handler: 'StaleWhileRevalidate',
             options: { cacheName: 'google-fonts-css' },

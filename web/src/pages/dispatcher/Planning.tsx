@@ -113,6 +113,16 @@ export function Planning() {
         </Callout>
       )}
 
+      <div className="mb-3 flex flex-wrap gap-2 text-xs font-semibold">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-teal px-3 py-1 text-white">
+          <Truck className="size-3.5" /> Max 2 trips per vehicle / day
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-chocolate px-3 py-1 text-white">
+          <Snowflake className="size-3.5" /> Fresh delivered before 08:00
+        </span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1 text-bg">Trip 2 leaves after Trip 1 returns</span>
+      </div>
+
       <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
         {[
           ['Served', summary.served, ''],
@@ -408,6 +418,10 @@ function TripBlock({ t, v, onOpen }: { t: Trip; v: Vehicle; onOpen: (o: Order) =
         <Meter label="Time" value={s.totalMin} max={TRIP_LIMIT_MIN} detail={`${Math.round(s.totalMin)} / ${TRIP_LIMIT_MIN} min`} />
       </div>
       {late && <p className="mt-2 text-xs font-semibold text-critical-ink">A stop misses its delivery window.</p>}
+      {s.stops.some((x) => x.freshLate) && <p className="mt-2 text-xs font-semibold text-critical-ink">A Fresh stop finishes after 08:00.</p>}
+      {t.brand === 'Fresh' && !s.stops.some((x) => x.freshLate) && s.stops.length > 0 && (
+        <p className="mt-2 text-xs text-muted">Fresh done by {fmtMin(s.stops[s.stops.length - 1].start + s.stops[s.stops.length - 1].service)} · deadline 08:00</p>
+      )}
     </div>
   )
 }
