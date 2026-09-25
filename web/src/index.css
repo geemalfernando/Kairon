@@ -537,3 +537,9 @@
 img.splash-tile {
   transform-origin: center;
 }
+
+/* A condensed display face gives the landing-page name its own identity. */
+.landing-wordmark {
+  font-family: 'Barlow Condensed', 'Arial Narrow', Impact, sans-serif;
+  font-weight: 800;
+}

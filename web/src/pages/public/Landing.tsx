@@ -20,7 +20,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { HOME } from '../../components/shell/nav'
 import { DeliverVignette, DeliveryScene, LaptopMock, LoadVignette, OrderVignette, PhoneMock, PlanVignette, Reveal, TabletMock } from '../../components/illustrations'
-import { Button, cn, Logo } from '../../components/ui'
+import { Button, cn } from '../../components/ui'
 import { DEPOTS } from '../../domain/seed'
 import { useOps, useSession } from '../../store'
 
@@ -40,7 +40,7 @@ export function Landing() {
       <FinalCta />
       <footer className="border-t border-line py-8">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 text-sm text-muted sm:px-6">
-          <Logo />
+          <LandingBrand />
           <span>One shared operation · Dispatcher · Loader · Driver · Store</span>
         </div>
         <div className="mx-auto mt-5 max-w-7xl px-4 text-xs text-muted sm:px-6">
@@ -48,6 +48,18 @@ export function Landing() {
         </div>
       </footer>
     </div>
+  )
+}
+
+function LandingBrand({ inverse = false }: { inverse?: boolean }) {
+  return (
+    <span className={cn('inline-flex shrink-0 items-center gap-2.5', inverse ? 'text-white' : 'text-ink')}>
+      <span className="inline-flex h-9 w-12 shrink-0" aria-hidden>
+        <img src="/brand/route-logo-dark.svg" alt="" width="680" height="486" className={cn('h-full w-full object-contain', !inverse && 'hidden dark:block')} />
+        {!inverse && <img src="/brand/route-logo-light.svg" alt="" width="680" height="486" className="h-full w-full object-contain dark:hidden" />}
+      </span>
+      <span className="landing-wordmark text-[34px] leading-none tracking-[0.03em] sm:text-[40px]">KAIRON</span>
+    </span>
   )
 }
 
@@ -61,11 +73,11 @@ function Nav({ signedIn, home }: { signedIn: boolean; home: string }) {
   }, [])
   return (
     <header className={cn('fixed inset-x-0 top-0 z-40 transition', scrolled ? 'border-b border-white/10 bg-[#0a1315]/85 backdrop-blur' : 'bg-transparent')}>
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-8 px-4 sm:px-6">
+      <div className="mx-auto flex h-20 max-w-7xl items-center gap-4 lg:gap-8 px-4 sm:px-6">
         <Link to="/">
-          <Logo inverse />
+          <LandingBrand inverse />
         </Link>
-        <nav className="hidden items-center gap-6 text-sm text-white/70 md:flex">
+        <nav className="hidden items-center gap-6 text-sm text-white/70 lg:flex">
           {[
             ['Platform', '#platform'],
             ['How it works', '#workflow'],
@@ -79,7 +91,7 @@ function Nav({ signedIn, home }: { signedIn: boolean; home: string }) {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          <span className="hidden items-center gap-2 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white/80 sm:inline-flex">
+          <span className="hidden items-center gap-2 rounded-full border border-white/15 px-3 py-1.5 text-xs font-medium text-white/80 xl:inline-flex">
             <span className="size-2 animate-pulse-dot rounded-full bg-[#34c27a] text-[#34c27a]" /> All systems operational
           </span>
           <Link to={home}>
@@ -112,10 +124,13 @@ function Hero() {
           <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
             <CircleDot className="size-3.5 text-chocolate" /> Live logistics operations platform
           </span>
-          <h1 className="mt-6 text-[40px] font-bold leading-[1.02] tracking-tight sm:text-6xl lg:text-[68px]">
-            Plan smarter.
-            <br />
-            <span className="bg-gradient-to-r from-[#5fd0cf] via-white to-white bg-clip-text text-transparent">Deliver with confidence.</span>
+          <h1 className="mt-6">
+            <span className="landing-wordmark block bg-gradient-to-br from-white via-white to-[#5fd0cf] bg-clip-text pb-2 text-[clamp(5rem,20vw,9.5rem)] leading-[0.9] tracking-[-0.015em] text-transparent lg:text-[clamp(6rem,11vw,9.5rem)]">KAIRON</span>
+            <span className="mt-5 block text-[32px] font-semibold leading-[1.1] tracking-tight sm:text-[42px] lg:text-[46px]">
+              Plan smarter.
+              <br />
+              <span className="text-[#5fd0cf]">Deliver with confidence.</span>
+            </span>
           </h1>
           <p className="mt-6 max-w-xl text-lg text-white/70">One intelligent operations platform connecting orders, dispatchers, loaders, drivers and stores — even when the network drops.</p>
           <div className="mt-7 flex flex-wrap gap-2" aria-label="Predict, plan, validate, deliver, recover">
