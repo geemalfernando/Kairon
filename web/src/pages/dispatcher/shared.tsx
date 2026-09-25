@@ -1,6 +1,7 @@
 import { Ban, Snowflake, Truck, X } from 'lucide-react'
 import { useState } from 'react'
 import { AuditTimeline } from '../../components/AuditTimeline'
+import { LocationMap } from '../../components/RouteMap'
 import { Badge, Button, CheckRow, ChoiceList, cn, Field, IconButton, Modal, StatusBadge, Textarea, toast } from '../../components/ui'
 import { customerMessageFor, suggestVehicles, validate, type Validation } from '../../domain/rules'
 import { vehicleLabel } from '../../domain/seed'
@@ -9,7 +10,7 @@ import type { Order } from '../../domain/types'
 import { auditFor, outletOf, tripOf } from '../../lib/select'
 import { ops, useOps } from '../../store'
 
-const REASONS = ['Capacity exhausted', 'Required vehicle unavailable', 'Access restriction', 'Time-window conflict', 'Fuel quota', 'Other'] as const
+const REASONS = ['Capacity exhausted', 'Required vehicle unavailable', 'Access restriction', 'Time-window conflict', 'Fresh 08:00 deadline', 'Fuel quota', 'Other'] as const
 
 export function DeferModal({ order, open, onClose }: { order?: Order; open: boolean; onClose: () => void }) {
   const [reason, setReason] = useState<(typeof REASONS)[number] | null>(null)
@@ -71,6 +72,12 @@ export function blockedHeadline(v: Validation, order: Order, vehicleId: string, 
     case 'volume':
     case 'weight':
       return { title: 'Capacity exceeded', body: `${vehicleId} · ${first.label}: ${first.detail}. Remove a stop or select another vehicle.`, icon: Ban }
+    case 'fresh':
+      return { title: 'Fresh 08:00 deadline', body: `${first.detail}. Fresh stores must receive their delivery before 08:00 — choose a closer trip or another vehicle.`, icon: Ban }
+    case 'trips':
+      return { title: 'Trip limit reached', body: `${vehicleId} has already made its 2 trips today. A vehicle can only do 2 delivery trips a day.`, icon: Truck }
+    case 'turnaround':
+      return { title: 'Vehicle still on Trip 1', body: `${first.detail}. Trip 2 can only leave after Trip 1 is back at the depot.`, icon: Truck }
     case 'fuel':
       return { title: 'Fuel quota risk', body: `Adding this route projects ${first.detail}. This allocation exceeds the weekly quota.`, icon: Ban }
     default:
@@ -190,6 +197,7 @@ export function OrderDrawer({ order, onClose, onDefer }: { order?: Order; onClos
               ))}
             </ul>
           </div>
+          <LocationMap outlet={out} depot={out.depot} vehicle={o.status === 'IN_TRANSIT' ? trip?.vehicleId : undefined} className="h-48" />
           <div>
             <div className="eyebrow mb-2">Service history</div>
             <div className="flex flex-wrap gap-2 text-sm">

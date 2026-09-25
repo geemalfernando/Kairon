@@ -3,7 +3,12 @@ import { fmtMin, hm } from './time'
 import type { Brand, Minutes, Order, Outlet, Trip, Vehicle } from './types'
 
 export const TRIP_LIMIT_MIN = 270
+/** A vehicle makes at most two delivery trips a day. */
 export const TRIPS_PER_VEHICLE = 2
+/** Every Fresh outlet must have its delivery completed before 08:00. */
+export const FRESH_DEADLINE = hm(8)
+/** Minimum depot turnaround between Trip 1 returning and Trip 2 leaving. */
+export const TURNAROUND_MIN = 20
 
 export interface World {
   orders: Order[]
@@ -30,6 +35,8 @@ export interface StopPlan {
   window: [Minutes, Minutes]
   service: number
   late: boolean
+  /** Fresh delivery would finish after 08:00. */
+  freshLate: boolean
   lateRisk: number // 0–100
 }
 
@@ -61,7 +68,9 @@ export function schedule(stopIds: string[], departure: Minutes, vehicle: Vehicle
     const eta = t
     const start = Math.max(t, out.window[0])
     const service = serviceMin(o)
-    const slack = out.window[1] - start
+    const fresh = o.brand === 'Fresh'
+    const deadline = fresh ? Math.min(out.window[1], FRESH_DEADLINE - service) : out.window[1]
+    const slack = deadline - start
     stops.push({
       orderId: id,
       outletId: out.id,
@@ -70,6 +79,7 @@ export function schedule(stopIds: string[], departure: Minutes, vehicle: Vehicle
       window: out.window,
       service,
       late: start > out.window[1],
+      freshLate: fresh && start + service > FRESH_DEADLINE,
       lateRisk: Math.max(2, Math.min(98, Math.round(60 - slack * 0.9))),
     })
     t = start + service
@@ -117,7 +127,7 @@ export function weeklyFuel(vehicle: Vehicle, w: World, extraTrip?: { stops: stri
   return used
 }
 
-export type CheckKey = 'status' | 'weight' | 'volume' | 'temperature' | 'depot' | 'access' | 'district' | 'window' | 'time' | 'fuel' | 'trips'
+export type CheckKey = 'status' | 'weight' | 'volume' | 'temperature' | 'depot' | 'access' | 'district' | 'window' | 'fresh' | 'time' | 'fuel' | 'trips' | 'turnaround'
 
 export interface Check {
   key: CheckKey
@@ -149,6 +159,11 @@ export function validate(order: Order, vehicle: Vehicle, w: World): Validation {
   const fuel = weeklyFuel(vehicle, w, { stops, departure, replaces: existing?.id })
   const lateStop = sch.stops.find((s) => s.late)
   const lateOutlet = lateStop && byId(w.outlets, lateStop.outletId)
+  const freshLate = sch.stops.find((s) => s.freshLate)
+  const lastFresh = order.brand === 'Fresh' && sch.stops.length ? sch.stops[sch.stops.length - 1] : undefined
+  // Trip 2 can only leave once Trip 1 is back at the depot.
+  const trip1 = session === 2 ? w.trips.find((t) => t.vehicleId === vehicle.id && t.number === 1 && t.status !== 'ABORTED') : undefined
+  const trip1Back = trip1 ? schedule(trip1.stops, trip1.departure, vehicle, w).finish + TURNAROUND_MIN : undefined
 
   const checks: Check[] = [
     { key: 'status', label: 'Vehicle available', ok: vehicle.status === 'AVAILABLE', blocking: true, detail: vehicle.status === 'AVAILABLE' ? 'Ready for dispatch' : `${vehicle.id} is ${vehicle.status.toLowerCase()}` },
@@ -183,6 +198,13 @@ export function validate(order: Order, vehicle: Vehicle, w: World): Validation {
       blocking: true,
       detail: lateStop ? `${lateOutlet?.id} arrives ${fmtMin(lateStop.start)} after ${fmtMin(lateStop.window[1])}` : 'All stops inside window',
     },
+    {
+      key: 'fresh',
+      label: 'Fresh by 08:00',
+      ok: !freshLate,
+      blocking: true,
+      detail: order.brand !== 'Fresh' ? 'Not a Fresh trip' : freshLate ? `${byId(w.outlets, freshLate.outletId)?.id} finishes ${fmtMin(freshLate.start + freshLate.service)}` : `Last drop done ${fmtMin((lastFresh?.start ?? 0) + (lastFresh?.service ?? 0))}`,
+    },
     { key: 'time', label: 'Trip time', ok: sch.totalMin <= TRIP_LIMIT_MIN, blocking: true, detail: `${Math.round(sch.totalMin)} / ${TRIP_LIMIT_MIN} min` },
     { key: 'fuel', label: 'Fuel quota', ok: fuel <= vehicle.fuelQuotaL, blocking: true, detail: `${Math.round(fuel)} / ${vehicle.fuelQuotaL} L this week` },
     {
@@ -190,7 +212,14 @@ export function validate(order: Order, vehicle: Vehicle, w: World): Validation {
       label: 'Trip limit',
       ok: !!existing || tripCount < TRIPS_PER_VEHICLE,
       blocking: true,
-      detail: `${existing ? tripCount : tripCount + 1} / ${TRIPS_PER_VEHICLE} trips`,
+      detail: `${existing ? tripCount : tripCount + 1} / ${TRIPS_PER_VEHICLE} trips today`,
+    },
+    {
+      key: 'turnaround',
+      label: 'Depot turnaround',
+      ok: trip1Back === undefined || departure >= trip1Back,
+      blocking: true,
+      detail: trip1Back === undefined ? 'First trip of the day' : departure >= trip1Back ? `Trip 1 back ${fmtMin(trip1Back - TURNAROUND_MIN)}` : `Trip 1 returns ${fmtMin(trip1Back - TURNAROUND_MIN)}, after Trip 2 leaves`,
     },
   ]
   return {
@@ -218,7 +247,9 @@ export function deferralReason(order: Order, w: World): string {
   if (order.temp === 'CHILLED' && !compatible.some((v) => isReefer(v.type) && validate(order, v, w).checks.find((c) => c.key === 'volume')?.ok))
     return 'Refrigerated capacity exhausted'
   if (outlet.vanOnly && !compatible.some((v) => isVan(v.type) && validate(order, v, w).ok)) return 'Required vehicle unavailable (van-only access)'
+  if (order.brand === 'Fresh' && compatible.every((v) => !validate(order, v, w).checks.find((c) => c.key === 'fresh')?.ok)) return 'Fresh 08:00 deadline cannot be met'
   if (compatible.every((v) => !validate(order, v, w).checks.find((c) => c.key === 'window')?.ok)) return 'Time-window conflict'
+  if (compatible.every((v) => !validate(order, v, w).checks.find((c) => c.key === 'trips')?.ok)) return 'Every vehicle has used its 2 trips'
   return 'Capacity exhausted'
 }
 
@@ -227,6 +258,8 @@ export const nextRecommendation = (o: Order) => `Tomorrow · Trip ${sessionOf(o.
 export const customerMessageFor = (reason: string) => {
   if (reason.startsWith('Refrigerated')) return 'Required refrigerated capacity was unavailable for this run. Your order has high priority for the next run.'
   if (reason.startsWith('Required vehicle')) return 'The vehicle type your outlet requires was unavailable for this run.'
+  if (reason.startsWith('Fresh')) return 'Fresh goods must arrive before 08:00 and no vehicle could reach you in time on this run. You have high priority for the next morning run.'
+  if (reason.startsWith('Every vehicle')) return 'All vehicles had already used their two trips for the day. Your order has been prioritised for the next run.'
   if (reason.startsWith('Time')) return 'We could not reach your outlet inside its delivery window on this run.'
   if (reason.startsWith('Fuel')) return 'Fleet fuel limits prevented a safe allocation on this run.'
   return 'Delivery capacity for this run was fully used. Your order has been prioritised for the next run.'
@@ -327,8 +360,9 @@ export function recoveryPlan(tripId: string, w: World): { options: RecoveryOptio
       const departure = existing?.departure ?? trip.departure + 110
       const sch = schedule(r.trip.stops, departure, v, world)
       const late = sch.stops.find((s) => s.late)
-      const blocking = r.checks.filter((c) => c.blocking && !c.ok && c.key !== 'window' && c.key !== 'trips')
-      if (blocking.length || late) continue
+      const blocking = r.checks.filter((c) => c.blocking && !c.ok && c.key !== 'window' && c.key !== 'fresh')
+      const tooLate = sch.stops.find((s) => s.late || s.freshLate)
+      if (blocking.length || late || tooLate) continue
       if (existing) existing.stops = r.trip.stops
       else trips.push({ id: `rescue-${v.id}`, vehicleId: v.id, number: trip.number, brand: trip.brand, district: trip.district, departure, stops: r.trip.stops, status: 'DRAFT' })
       const newEta = sch.stops.find((s) => s.orderId === id)!.start
