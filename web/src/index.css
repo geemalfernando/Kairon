@@ -10,33 +10,34 @@
  */
 :root {
   color-scheme: light;
-  --bg: #f4f5f7;
+  /* Platinum page, white cards: surfaces separate clearly */
+  --bg: #e5e7eb;
   --surface: #ffffff;
   --surface-2: #eef0f2;
-  --surface-3: #e5e7eb;
-  --line: #e5e7eb;
-  --line-strong: #cfd5d7;
-  --ink: #0f1b1d;
-  --muted: #56676a;
-  --faint: #85979a;
+  --surface-3: #d6dadd;
+  --line: #d0d5d8;
+  --line-strong: #a9b3b6;
+  --ink: #0a1315;
+  --muted: #3f4f52;
+  --faint: #66777a;
 
   --brand: #106c6c;
-  --brand-hover: #0c5858;
-  --brand-soft: #e2efef;
-  --brand-ink: #0c5858;
+  --brand-hover: #0b5555;
+  --brand-soft: #d4e8e8;
+  --brand-ink: #0a4f4f;
   --on-brand: #ffffff;
 
   --attention: #d66d32;
-  --attention-soft: #fbece3;
-  --attention-ink: #a44b19;
+  --attention-soft: #f8e1d3;
+  --attention-ink: #8f3d11;
 
   --warning: #d49a12;
   --warning-soft: #fcf3dc;
   --warning-ink: #8a6200;
 
   --info: #0284c7;
-  --info-soft: #e1f1fb;
-  --info-ink: #036aa0;
+  --info-soft: #d7ecf8;
+  --info-ink: #025b8a;
 
   --critical: #d92d2d;
   --critical-soft: #fde8e8;
@@ -50,26 +51,26 @@
   --series-chilled: #2b6fd6;
   --series-ambient: #1a9a8a;
 
-  --shadow: 0 1px 2px rgb(15 27 29 / 0.05), 0 4px 16px rgb(15 27 29 / 0.05);
+  --shadow: 0 1px 2px rgb(10 19 21 / 0.08), 0 6px 20px rgb(10 19 21 / 0.07);
   --shadow-lg: 0 12px 40px rgb(15 27 29 / 0.16);
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #0a1315;
-  --surface: #101c1f;
-  --surface-2: #152427;
-  --surface-3: #1c2e32;
-  --line: #1f3237;
-  --line-strong: #2d464c;
-  --ink: #e5e7eb;
-  --muted: #9aabae;
-  --faint: #6f8285;
+  --bg: #070f11;
+  --surface: #111e21;
+  --surface-2: #16272a;
+  --surface-3: #1f3337;
+  --line: #243a3f;
+  --line-strong: #37545a;
+  --ink: #f1f3f5;
+  --muted: #b2c0c2;
+  --faint: #8a9c9f;
 
-  --brand: #2a9a9a;
-  --brand-hover: #35adad;
-  --brand-soft: rgb(42 154 154 / 0.16);
-  --brand-ink: #6fcaca;
+  --brand: #2aa3a3;
+  --brand-hover: #35b5b5;
+  --brand-soft: rgb(42 163 163 / 0.2);
+  --brand-ink: #7fd8d8;
   --on-brand: #ffffff;
 
   --attention: #e57f45;

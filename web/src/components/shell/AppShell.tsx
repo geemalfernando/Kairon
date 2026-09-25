@@ -112,7 +112,7 @@ function Sidebar({ user }: { user: User }) {
                     to={it.to}
                     end={it.end}
                     className={({ isActive }) =>
-                      cn('group flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition', isActive ? 'bg-brand-soft text-brand-ink' : 'text-muted hover:bg-surface-2 hover:text-ink')
+                      cn('group flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm font-medium transition', isActive ? 'bg-brand text-on-brand shadow-sm' : 'text-muted hover:bg-surface-2 hover:text-ink')
                     }
                   >
                     <it.icon className="size-[18px] shrink-0" />

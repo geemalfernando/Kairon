@@ -244,12 +244,12 @@ function CommandPreview() {
   )
 }
 
-function SectionHead({ eyebrow, title, sub }: { eyebrow: string; title: React.ReactNode; sub?: string }) {
+function SectionHead({ eyebrow, title, sub, inverse }: { eyebrow: string; title: React.ReactNode; sub?: string; inverse?: boolean }) {
   return (
     <Reveal className="mx-auto mb-12 max-w-2xl text-center">
-      <div className="eyebrow mb-3 !text-brand-ink">{eyebrow}</div>
-      <h2 className="text-3xl font-bold sm:text-[40px] sm:leading-[1.1]">{title}</h2>
-      {sub && <p className="mt-4 text-muted">{sub}</p>}
+      <div className={cn('mb-3 inline-block rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em]', inverse ? 'bg-chocolate text-white' : 'bg-teal text-white')}>{eyebrow}</div>
+      <h2 className={cn('text-3xl font-bold sm:text-[40px] sm:leading-[1.1]', inverse ? 'text-white' : 'text-ink')}>{title}</h2>
+      {sub && <p className={cn('mt-4', inverse ? 'text-white/80' : 'text-muted')}>{sub}</p>}
     </Reveal>
   )
 }
@@ -269,12 +269,12 @@ function Problems() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PROBLEMS.map((p, k) => (
             <Reveal key={p.title} delay={k * 90}>
-            <div className="group h-full rounded-2xl border border-line bg-surface p-6 shadow-card transition hover:-translate-y-1 hover:border-attention/50">
-              <span className="grid size-11 place-items-center rounded-xl bg-attention-soft text-attention-ink transition group-hover:bg-attention group-hover:text-white">
+            <div className="group h-full rounded-2xl border border-line border-t-4 border-t-chocolate bg-surface p-6 shadow-card transition hover:-translate-y-1 hover:shadow-pop">
+              <span className="grid size-11 place-items-center rounded-xl bg-chocolate text-white transition group-hover:scale-110">
                 <p.icon className="size-5" />
               </span>
               <h3 className="mt-5 text-sm font-bold uppercase tracking-[0.12em]">{p.title}</h3>
-              <div className="mt-3 space-y-1 text-sm text-muted">
+              <div className="mt-3 space-y-1 text-sm text-ink/80">
                 {p.lines.map((l) => (
                   <p key={l}>{l}</p>
                 ))}
@@ -335,7 +335,7 @@ function Devices() {
     <section className="overflow-hidden border-t border-line bg-[#0a1315] py-24 text-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <Reveal className="mx-auto mb-14 max-w-2xl text-center">
-          <div className="eyebrow mb-3 !text-[#6fcaca]">Every screen, every device</div>
+          <div className="mb-3 inline-block rounded-full bg-chocolate px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">Every screen, every device</div>
           <h2 className="text-3xl font-bold sm:text-[40px] sm:leading-[1.1]">A command center, a loading bay and a route companion.</h2>
           <p className="mt-4 text-white/60">Large screens for planning. A shared tablet at the bay. A phone in the cab that doesn’t need signal. Installable as an app on all of them.</p>
         </Reveal>
@@ -382,13 +382,14 @@ function Workflow() {
   }, [auto])
   const a = FLOW[active]
   return (
-    <section id="workflow" className="border-y border-line bg-surface py-24">
+    <section id="workflow" className="relative overflow-hidden bg-teal py-24 text-white">
+      <div className="pointer-events-none absolute -right-32 -top-32 size-96 rounded-full bg-chocolate/25 blur-[100px]" />
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
-        <SectionHead eyebrow="Connected workflow" title="One decision, visible to every role." sub="A dispatcher's decision reaches the loader. A driver's delivery record reaches the store. Nothing lives in a notebook." />
+        <SectionHead inverse eyebrow="Connected workflow" title="One decision, visible to every role." sub="A dispatcher's decision reaches the loader. A driver's delivery record reaches the store. Nothing lives in a notebook." />
         <div className="relative" onMouseLeave={() => setAuto(true)}>
           <svg className="absolute left-0 right-0 top-7 hidden h-1 w-full md:block" preserveAspectRatio="none" viewBox="0 0 100 1" aria-hidden>
-            <line x1="4" y1="0.5" x2="96" y2="0.5" stroke="var(--line-strong)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-            <line x1="4" y1="0.5" x2={4 + (92 * active) / (FLOW.length - 1)} y2="0.5" stroke="var(--brand)" strokeWidth="2" vectorEffect="non-scaling-stroke" className="transition-all duration-700" />
+            <line x1="4" y1="0.5" x2="96" y2="0.5" stroke="rgb(255 255 255 / 0.3)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+            <line x1="4" y1="0.5" x2={4 + (92 * active) / (FLOW.length - 1)} y2="0.5" stroke="#D66D32" strokeWidth="3" vectorEffect="non-scaling-stroke" className="transition-all duration-700" />
           </svg>
           <ol className="relative grid grid-cols-4 gap-y-6 md:grid-cols-7">
             {FLOW.map((f, k) => (
@@ -399,20 +400,20 @@ function Workflow() {
                   onClick={() => (setAuto(false), setActive(k))}
                   className={cn(
                     'grid size-14 place-items-center rounded-2xl border-2 font-display text-sm font-bold transition-all duration-300',
-                    k === active ? 'scale-110 border-brand bg-brand text-white shadow-lg' : k < active ? 'border-brand bg-brand-soft text-brand-ink' : 'border-line-strong bg-surface text-muted',
+                    k === active ? 'scale-110 border-chocolate bg-chocolate text-white shadow-lg shadow-black/30' : k < active ? 'border-white bg-white text-teal' : 'border-white/40 bg-teal text-white/75',
                   )}
                   aria-pressed={k === active}
                 >
                   {String(k + 1).padStart(2, '0')}
                 </button>
-                <span className={cn('mt-3 text-xs font-bold uppercase tracking-[0.14em]', k === active ? 'text-ink' : 'text-muted')}>{f.key}</span>
+                <span className={cn('mt-3 text-xs font-bold uppercase tracking-[0.14em]', k === active ? 'text-white' : 'text-white/70')}>{f.key}</span>
               </li>
             ))}
           </ol>
-          <div key={active} className="mx-auto mt-10 grid max-w-3xl animate-rise items-center gap-6 rounded-2xl border border-line bg-bg p-4 sm:grid-cols-[1.1fr_1fr] sm:p-6">
+          <div key={active} className="mx-auto mt-10 grid max-w-3xl animate-rise items-center gap-6 rounded-2xl bg-surface p-4 text-ink shadow-pop sm:grid-cols-[1.1fr_1fr] sm:p-6">
             <div className="overflow-hidden rounded-xl">{VIGNETTE[a.key]}</div>
             <div className="text-center sm:text-left">
-              <div className="eyebrow !text-brand-ink">{String(active + 1).padStart(2, '0')} · {a.key}</div>
+              <div className="eyebrow !text-attention-ink">{String(active + 1).padStart(2, '0')} · {a.key}</div>
               <div className="mt-1 font-display text-2xl font-semibold">{a.role}</div>
               <ul className="mt-4 inline-flex flex-col gap-1.5 text-left text-sm">
                 {a.bullets?.map((b) => (
@@ -440,7 +441,9 @@ function Intelligence() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHead eyebrow="Operational intelligence" title="Every plan is checked. Every decision is explained." />
         <div className="grid gap-5 lg:grid-cols-3">
-          <Reveal className="rounded-2xl border border-line bg-surface p-7 shadow-card">
+          <Reveal className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+            <div className="h-2 bg-teal" />
+            <div className="p-7">
             <h3 className="text-lg font-semibold">Constraint-aware planning</h3>
             <p className="mt-1 text-sm text-muted">No allocation is saved unless it is physically possible.</p>
             <ul className="mt-5 grid grid-cols-2 gap-2.5 text-sm">
@@ -453,8 +456,11 @@ function Intelligence() {
                 </li>
               ))}
             </ul>
+            </div>
           </Reveal>
-          <Reveal delay={120} className="rounded-2xl border border-line bg-surface p-7 shadow-card">
+          <Reveal delay={120} className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+            <div className="h-2 bg-ocean" />
+            <div className="p-7">
             <h3 className="text-lg font-semibold">Offline-first delivery</h3>
             <p className="mt-1 text-sm text-muted">Network lost? No problem.</p>
             <div className={cn('mt-5 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors duration-500', offline ? 'bg-ink text-bg' : 'bg-success-soft text-success-ink')}>
@@ -469,8 +475,11 @@ function Intelligence() {
                 </li>
               ))}
             </ul>
+            </div>
           </Reveal>
-          <Reveal delay={240} className="rounded-2xl border border-line bg-surface p-7 shadow-card">
+          <Reveal delay={240} className="overflow-hidden rounded-2xl border border-line bg-surface shadow-card">
+            <div className="h-2 bg-chocolate" />
+            <div className="p-7">
             <h3 className="text-lg font-semibold">Explainable decisions</h3>
             <p className="mt-1 text-sm text-muted">Stores see why, not just “delayed”.</p>
             <div className="mt-5 rounded-xl border border-attention/40 bg-attention-soft p-4">
@@ -491,6 +500,7 @@ function Intelligence() {
                 <dd className="font-medium">Tomorrow · Trip 1</dd>
               </div>
             </dl>
+            </div>
           </Reveal>
         </div>
       </div>
@@ -505,22 +515,24 @@ const ROLES: { role: 'DISPATCHER' | 'LOADER' | 'DRIVER' | 'STORE_MANAGER'; name:
   { role: 'STORE_MANAGER', name: 'Store manager', title: 'Store portal', body: 'Order, track and confirm deliveries.', device: 'Desktop or phone', icon: MonitorSmartphone },
 ]
 
+const ROLE_TILE: Record<string, string> = { DISPATCHER: 'bg-teal', LOADER: 'bg-chocolate', DRIVER: 'bg-ocean', STORE_MANAGER: 'bg-[#0a1315] dark:bg-steel' }
+
 function Roles() {
   return (
-    <section id="roles" className="border-y border-line bg-surface py-24">
+    <section id="roles" className="bg-surface py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <SectionHead eyebrow="Four roles, one operation" title="Designed for where each person actually works." />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {ROLES.map((r) => (
-            <Link key={r.role} to={`/login?role=${r.role}`} className="group relative overflow-hidden rounded-2xl border border-line bg-bg p-6 transition hover:-translate-y-1 hover:border-brand hover:shadow-pop">
-              <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand-ink transition group-hover:bg-brand group-hover:text-white">
+            <Link key={r.role} to={`/login?role=${r.role}`} className="group relative overflow-hidden rounded-2xl border border-line-strong/60 bg-bg p-6 transition hover:-translate-y-1 hover:border-ink hover:shadow-pop">
+              <span className={cn('grid size-12 place-items-center rounded-xl text-white shadow-md transition group-hover:scale-110', ROLE_TILE[r.role])}>
                 <r.icon className="size-5" />
               </span>
               <div className="eyebrow mt-6">{r.name}</div>
               <h3 className="mt-1 text-xl font-semibold">{r.title}</h3>
               <p className="mt-2 text-sm text-muted">{r.body}</p>
               <div className="mt-6 flex items-center justify-between text-xs">
-                <span className="rounded-full bg-surface-2 px-2 py-1 font-medium text-muted">{r.device}</span>
+                <span className="rounded-full bg-ink px-2.5 py-1 font-semibold text-bg">{r.device}</span>
                 <span className="inline-flex items-center gap-1 font-semibold text-brand-ink opacity-0 transition group-hover:opacity-100">
                   Try demo <ArrowRight className="size-3.5" />
                 </span>
@@ -555,7 +567,7 @@ function OfflineDemo() {
     <section id="offline" className="py-24">
       <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-2">
         <div>
-          <div className="eyebrow mb-3 !text-brand-ink">Offline-first</div>
+          <div className="mb-3 inline-block rounded-full bg-ocean px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-white">Offline-first</div>
           <h2 className="text-3xl font-bold sm:text-[40px] sm:leading-[1.1]">The route keeps going when the signal doesn't.</h2>
           <p className="mt-4 max-w-lg text-muted">
             Drivers and loaders keep every screen they need. Arrivals, deliveries, photos and signatures are saved on the device and synchronized the moment connection returns — with conflicts explained, never silently overwritten.
@@ -600,7 +612,7 @@ function FinalCta() {
         <h2 className="relative text-3xl font-bold sm:text-4xl">One shared operation, viewed four ways.</h2>
         <p className="relative mx-auto mt-3 max-w-xl text-white/80">Dispatcher sees control. Loader sees what to prepare. Driver sees what to do next. Store manager sees what is happening to their order.</p>
         <Link to="/login" className="relative mt-8 inline-block">
-          <Button variant="inverse" size="lg">
+          <Button variant="attention" size="lg" className="shadow-lg shadow-black/25">
             Open the demo <ArrowRight className="size-4" />
           </Button>
         </Link>
