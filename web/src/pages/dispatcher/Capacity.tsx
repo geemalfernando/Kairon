@@ -1,154 +1,48 @@
-import { Snowflake, Table2, TrendingUp } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Callout, Card, CardHeader, cn, PageHeader, Segmented, Stat } from '../../components/ui'
+import { Link } from 'react-router-dom'
+import { Badge, Button, Callout, Card, CardHeader, Field, Input, PageHeader, Segmented, Select, Stat, Textarea, toast } from '../../components/ui'
+import { forecastDemand } from '../../domain/intelligence'
 import { isReefer } from '../../domain/seed'
-import { useOps } from '../../store'
-import { forecastFresh } from './forecast'
+import type { Brand, Depot } from '../../domain/types'
+import { ops, useNetwork, useOps } from '../../store'
 
 export function Capacity() {
   const d = useOps((s) => s.data)
-  const data = useMemo(() => forecastFresh(d), [d])
-  // One morning trip per reefer per day, six operating days.
-  const reeferWeekly = useMemo(() => d.vehicles.filter((v) => isReefer(v.type) && v.depot === 'Peliyagoda' && v.status === 'AVAILABLE').reduce((s, v) => s + v.capacityM3 * 0.85, 0) * 6, [d])
+  const net = useNetwork()
+  const [depot, setDepot] = useState<Depot>('Peliyagoda')
+  const [brand, setBrand] = useState<Brand>('Fresh')
+  const [uplift, setUplift] = useState(1)
   const [view, setView] = useState<'chart' | 'table'>('chart')
-  const [hover, setHover] = useState<number | null>(null)
-  const max = Math.max(...data.map((w) => w.chilled + w.ambient), reeferWeekly) * 1.1
-  const short = data.filter((w) => w.chilled > reeferWeekly)
-  const ticks = niceTicks(max)
-
-  const H = 260
-  const y = (v: number) => H - (v / ticks[ticks.length - 1]) * H
-
-  return (
-    <>
-      <PageHeader eyebrow="Planning" title="Capacity forecast" subtitle="Fresh volume at Peliyagoda for the next ten weeks, split by temperature." />
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Next week" value={`${data[0].chilled + data[0].ambient} m³`} sub="Fresh total" />
-        <Stat label="Peak week" value={`W${data.reduce((a, b) => (b.chilled + b.ambient > a.chilled + a.ambient ? b : a)).week}`} sub="highest demand" tone="brand" icon={<TrendingUp className="size-4" />} />
-        <Stat label="Reefer capacity" value={`${Math.round(reeferWeekly)} m³`} sub="per week, available fleet" tone="info" icon={<Snowflake className="size-4" />} />
-        <Stat label="Weeks short on reefer" value={short.length} sub={short.length ? short.map((w) => `W${w.week}`).join(', ') : 'none'} tone={short.length ? 'attention' : 'success'} />
-      </div>
-      {short.length > 0 && (
-        <Callout tone="warning" title={`Chilled demand exceeds reefer capacity in ${short.length} week${short.length > 1 ? 's' : ''}`} className="mb-6">
-          Plan rental reefers or shift ambient Fresh items to dry trucks for W{short.map((w) => w.week).join(', W')}.
-        </Callout>
-      )}
-      <Card>
-        <CardHeader
-          eyebrow="Next 10 weeks"
-          title="Fresh volume by temperature (m³)"
-          action={<Segmented size="sm" value={view} onChange={setView} options={[{ value: 'chart', label: 'Chart' }, { value: 'table', label: <span className="inline-flex items-center gap-1"><Table2 className="size-3.5" /> Table</span> }]} />}
-        />
-        {view === 'chart' ? (
-          <div className="p-5">
-            <div className="mb-4 flex flex-wrap gap-4 text-xs text-muted">
-              <Legend color="var(--series-chilled)" label="Chilled" />
-              <Legend color="var(--series-ambient)" label="Ambient" />
-              <span className="inline-flex items-center gap-2">
-                <span className="h-0 w-5 border-t-2 border-ink" /> Reefer capacity
-              </span>
-            </div>
-            <div className="relative flex gap-3">
-              <div className="relative w-10 shrink-0 text-right text-[11px] tabular-nums text-muted" style={{ height: H }}>
-                {ticks.map((t) => (
-                  <span key={t} className="absolute right-0 -translate-y-1/2" style={{ top: y(t) }}>
-                    {t.toLocaleString()}
-                  </span>
-                ))}
-              </div>
-              <div className="relative flex-1" style={{ height: H }} onMouseLeave={() => setHover(null)}>
-                {ticks.map((t) => (
-                  <div key={t} className="absolute inset-x-0 border-t border-line" style={{ top: y(t) }} />
-                ))}
-                <div className="absolute inset-x-0 z-10 border-t-2 border-ink" style={{ top: y(reeferWeekly) }}>
-                  <span className="absolute -top-5 right-0 rounded bg-surface px-1 text-[11px] font-semibold">Reefer capacity {Math.round(reeferWeekly)}</span>
-                </div>
-                <div className="absolute inset-0 flex items-end">
-                  {data.map((w, i) => {
-                    const hC = (w.chilled / ticks[ticks.length - 1]) * H
-                    const hA = (w.ambient / ticks[ticks.length - 1]) * H
-                    return (
-                      <div key={w.week} className="relative flex h-full flex-1 flex-col items-center justify-end" onMouseEnter={() => setHover(i)} onFocus={() => setHover(i)} tabIndex={0} aria-label={`Week ${w.week}: chilled ${w.chilled} m³, ambient ${w.ambient} m³`}>
-                        <div className={cn('flex w-full max-w-6 flex-col transition-opacity', hover !== null && hover !== i && 'opacity-45')}>
-                          <div className="rounded-t-[4px]" style={{ height: hA, background: 'var(--series-ambient)' }} />
-                          <div className="border-t-2 border-surface" style={{ height: hC, background: 'var(--series-chilled)' }} />
-                        </div>
-                        {hover === i && (
-                          <div className={cn('pointer-events-none absolute z-20 w-44 rounded-lg border border-line bg-surface p-3 text-xs shadow-pop', i > data.length - 3 ? 'right-1/2' : 'left-1/2')} style={{ bottom: hA + hC + 12 }}>
-                            <div className="mb-1.5 font-semibold">Week {w.week}{w.note ? ` · ${w.note}` : ''}</div>
-                            <Row color="var(--series-chilled)" label="Chilled" v={w.chilled} />
-                            <Row color="var(--series-ambient)" label="Ambient" v={w.ambient} />
-                            <div className="mt-1 flex justify-between border-t border-line pt-1 font-semibold">
-                              <span>Total</span>
-                              <span className="tabular-nums">{w.chilled + w.ambient} m³</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="ml-[52px] mt-2 flex">
-              {data.map((w) => (
-                <div key={w.week} className="flex-1 text-center text-[11px] text-muted">
-                  W{w.week}
-                  {w.note && <span className="mx-auto mt-0.5 block size-1 rounded-full bg-muted" title={w.note} />}
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-surface-2 text-left text-xs text-muted">
-              <tr>
-                {['Week', 'Chilled m³', 'Ambient m³', 'Total m³', 'Note'].map((h) => (
-                  <th key={h} className="px-5 py-2.5 font-semibold">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line tabular-nums">
-              {data.map((w) => (
-                <tr key={w.week}>
-                  <td className="px-5 py-2.5 font-semibold">W{w.week}</td>
-                  <td className={cn('px-5 py-2.5', w.chilled > reeferWeekly && 'font-semibold text-attention-ink')}>{w.chilled}</td>
-                  <td className="px-5 py-2.5">{w.ambient}</td>
-                  <td className="px-5 py-2.5">{w.chilled + w.ambient}</td>
-                  <td className="px-5 py-2.5 text-muted">{w.note ?? ''}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Card>
-    </>
-  )
+  const [selectedWeek, setSelectedWeek] = useState('')
+  const [extra, setExtra] = useState(1)
+  const [cold, setCold] = useState(true)
+  const [note, setNote] = useState('')
+  const weeks = useMemo(() => forecastDemand(d, depot, brand, uplift), [d, depot, brand, uplift])
+  const week = weeks.find((w) => w.key === selectedWeek) ?? weeks[0]
+  const available = d.vehicles.filter((v) => v.depot === depot && v.status === 'AVAILABLE')
+  // One conservative planning trip per operating day; no claim of route feasibility.
+  const totalCapacity = Math.round(available.reduce((s, v) => s + v.capacityM3 * .85, 0) * 6)
+  const coldCapacity = Math.round(available.filter((v) => isReefer(v.type)).reduce((s, v) => s + v.capacityM3 * .85, 0) * 6)
+  const shortfall = Math.max(0, week.chilled - coldCapacity)
+  const max = Math.max(1, ...weeks.map((w) => w.high))
+  const degraded = !net.online || ['STALE', 'UNAVAILABLE'].includes(d.intelligence?.mode ?? 'READY')
+  const proposals = d.intelligence?.capacityPlans.filter((p) => p.depot === depot && p.brand === brand) ?? []
+  return <>
+    <PageHeader eyebrow="Future planning" title="Demand & capacity outlook" subtitle="Ten weeks of requested volume, for every depot and brand. Turn a gap into a documented capacity proposal." actions={<Link to="/dispatcher/simulator"><Button variant="secondary">Test a daily allocation</Button></Link>} />
+    <Callout title={degraded ? 'Planning baseline · predictions unavailable' : 'Demo forecast · transparent baseline'} tone={degraded ? 'warning' : 'info'} className="mb-5">This prototype extrapolates the seeded order mix; no historical dataset, calendar feed, or trained forecasting model is connected. Deferred demand is included. The shaded range is a −20% / +25% scenario, not a calibrated confidence interval.{degraded && <Link to="/resilience" className="ml-1 underline">Review service status.</Link>}</Callout>
+    <Card className="mb-5 grid gap-4 p-4 sm:grid-cols-3">
+      <Field label="Depot">{(id) => <Select id={id} value={depot} onChange={(e) => setDepot(e.target.value as Depot)}><option>Peliyagoda</option><option>Kandy</option></Select>}</Field>
+      <Field label="Brand">{(id) => <Select id={id} value={brand} onChange={(e) => setBrand(e.target.value as Brand)}><option>Fresh</option><option>Style</option><option>Tech</option></Select>}</Field>
+      <Field label={`Demand scenario · ${Math.round(uplift * 100)}% of baseline`} hint="Try a peak-demand uplift; this is not a real festival forecast.">{(id) => <input id={id} type="range" min="0.5" max="2" step="0.05" value={uplift} onChange={(e) => setUplift(Number(e.target.value))} className="w-full accent-teal" />}</Field>
+    </Card>
+    <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4"><Stat label="Next week demand" value={`${weeks[0].total} m³`} sub={`${depot} · ${brand}`} /><Stat label="Chilled portion" value={`${weeks[0].chilled} m³`} sub={brand === 'Fresh' ? 'included in total' : 'only Fresh has chilled demand'} tone="info" /><Stat label="Available vehicles / drivers" value={available.length} sub="one driver per existing vehicle" /><Stat label="Chilled weekly gap" value={`${shortfall} m³`} sub={week.key} tone={shortfall ? 'attention' : 'success'} /></div>
+    <Card><CardHeader title={`${depot} · ${brand} demand (m³)`} eyebrow="ISO weeks · Monday through Saturday operation" action={<Segmented value={view} onChange={setView} options={[{ value: 'chart', label: 'Chart' }, { value: 'table', label: 'Table' }]} />} />
+      {view === 'chart' ? <div className="p-5"><div className="mb-5 flex flex-wrap gap-4 text-xs text-muted"><span>■ Chilled (blue)</span><span>■ Ambient (teal)</span><span>Light bar: upper demand scenario</span></div><div className="space-y-3">{weeks.map((w) => <button key={w.key} onClick={() => setSelectedWeek(w.key)} aria-pressed={w.key === week.key} className={`grid w-full grid-cols-[6rem_1fr_4rem] items-center gap-3 rounded-lg p-2 text-left text-xs hover:bg-surface-2 ${week.key === w.key ? 'bg-brand-soft ring-1 ring-brand/30' : ''}`} aria-label={`${w.key}: ${w.total} cubic metres total, ${w.chilled} chilled. Select week.`}><span className="font-semibold">{w.key}</span><span className="relative block h-6 rounded bg-surface-2"><span className="absolute inset-y-0 left-0 rounded bg-brand/10" style={{ width: `${w.high / max * 100}%` }} /><span className="absolute inset-y-0 left-0 flex overflow-hidden rounded" style={{ width: `${w.total / max * 100}%` }}><span style={{ width: `${w.total ? w.chilled / w.total * 100 : 0}%`, background: 'var(--series-chilled)' }} /><span className="flex-1" style={{ background: 'var(--series-ambient)' }} /></span></span><span className="text-right tabular-nums">{w.total}</span></button>)}</div></div> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-surface-2 text-xs text-muted"><tr>{['Week / starts', 'Total m³', 'Chilled m³', 'Ambient m³', 'Scenario range m³'].map((h) => <th key={h} className="p-4">{h}</th>)}</tr></thead><tbody className="divide-y divide-line">{weeks.map((w) => <tr key={w.key}><td className="p-4"><button className="font-semibold text-brand-ink underline" onClick={() => setSelectedWeek(w.key)}>{w.key}</button><p className="text-xs text-muted">{w.start}</p></td><td className="p-4">{w.total}</td><td className="p-4">{w.chilled}</td><td className="p-4">{w.ambient}</td><td className="p-4">{w.low}–{w.high}</td></tr>)}</tbody></table></div>}
+    </Card>
+    <div className="mt-5 grid gap-5 lg:grid-cols-2">
+      <Card className="p-5"><h2 className="font-semibold">Capacity interpretation · {week.key}</h2><dl className="mt-4 space-y-3 text-sm"><div className="flex justify-between gap-3"><dt>All-brand shared volume budget</dt><dd>{totalCapacity} m³ / week</dd></div><div className="flex justify-between gap-3"><dt>Refrigerated subset</dt><dd>{coldCapacity} m³ / week</dd></div><div className="flex justify-between gap-3"><dt>{brand} scenario demand</dt><dd>{week.low}–{week.high} m³</dd></div></dl><p className="mt-4 text-sm text-muted">Assumes one trip per vehicle per day, six days, at 85% volume utilization. Shared fleet capacity is not reserved for this brand. Weight, fuel, access, trip timing and other brands can reduce usable capacity.</p><p className="mt-3 text-sm text-muted">Baseline cadence: Fresh six delivery days, Style one weekly order cycle, Tech three illustrative demand days. Empty cohorts remain zero. Peaks need real calendar and history inputs.</p><Link to="/dispatcher/planning" className="mt-4 inline-block font-semibold text-brand-ink">Validate the actual daily plan →</Link></Card>
+      <Card className="p-5"><h2 className="font-semibold">Create a capacity proposal</h2><p className="mt-1 text-sm text-muted">Record a request for vehicles and their drivers. This does not book rentals or change the active fleet.</p><div className="mt-4 space-y-3"><Field label="Target week">{(id) => <Select id={id} value={week.key} onChange={(e) => setSelectedWeek(e.target.value)}>{weeks.map((w) => <option key={w.key}>{w.key}</option>)}</Select>}</Field><div className="grid grid-cols-2 gap-3"><Field label="Additional vehicles / drivers">{(id) => <Input id={id} type="number" min={1} max={60} value={extra} onChange={(e) => setExtra(Number(e.target.value))} />}</Field><Field label="Temperature capability">{(id) => <Select id={id} value={cold ? 'cold' : 'dry'} onChange={(e) => setCold(e.target.value === 'cold')}><option value="cold">Refrigerated</option><option value="dry">Ambient / dry</option></Select>}</Field></div><Field label="Reason and assumptions">{(id) => <Textarea id={id} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Explain demand, required vehicle size and receiving-window assumptions…" />}</Field><Button disabled={!net.online || !note.trim() || !Number.isInteger(extra) || extra < 1 || extra > 60} onClick={() => { ops('capacityProposal', { depot, brand, week: week.key, extraVehicles: extra, refrigerated: cold, note: `${note.trim()} Demand scenario: ${Math.round(uplift * 100)}%.` }); setNote(''); toast('Capacity proposal saved', { body: 'Recorded in history; no rental has been booked.' }) }}>Save proposal</Button>{!net.online && <p className="text-xs text-attention-ink">Reconnect to save a proposal.</p>}</div></Card>
+    </div>
+    <Card className="mt-5"><CardHeader title="Saved proposals" eyebrow={`${depot} · ${brand}`} />{proposals.length ? <ul className="divide-y divide-line">{proposals.map((p) => <li key={p.id} className="p-4 text-sm"><div className="flex flex-wrap items-center gap-2"><strong>{p.week} · {p.extraVehicles} {p.refrigerated ? 'refrigerated' : 'dry'} vehicles + drivers</strong><Badge tone="attention">Proposal only</Badge></div><p className="mt-2 text-muted">{p.note}</p></li>)}</ul> : <p className="p-5 text-sm text-muted">No capacity proposals for this depot and brand yet.</p>}</Card>
+  </>
 }
-
-function niceTicks(max: number) {
-  const step = Math.pow(10, Math.floor(Math.log10(max / 4)))
-  const nice = [1, 2, 2.5, 5, 10].map((m) => m * step).find((s) => max / s <= 5)!
-  const out = []
-  for (let v = 0; v <= max + nice * 0.001 || out.length < 2; v += nice) out.push(Math.round(v))
-  if (out[out.length - 1] < max) out.push(out[out.length - 1] + Math.round(nice))
-  return out
-}
-
-const Legend = ({ color, label }: { color: string; label: string }) => (
-  <span className="inline-flex items-center gap-2">
-    <span className="size-2.5 rounded-sm" style={{ background: color }} />
-    {label}
-  </span>
-)
-const Row = ({ color, label, v }: { color: string; label: string; v: number }) => (
-  <div className="flex items-center justify-between gap-3">
-    <span className="inline-flex items-center gap-1.5">
-      <span className="size-2 rounded-sm" style={{ background: color }} />
-      {label}
-    </span>
-    <span className="tabular-nums">{v} m³</span>
-  </div>
-)

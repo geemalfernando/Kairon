@@ -1,3 +1,4 @@
+import { WorkflowEntry } from '../shared/Workflow'
 import { AlertTriangle, ArrowRight, CalendarClock, ClipboardList, Columns3, Radar, Snowflake, Truck } from 'lucide-react'
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -64,6 +65,11 @@ export function Dashboard() {
 
   return (
     <>
+      <WorkflowEntry />
+      <div className="mb-5 grid gap-3 sm:grid-cols-2">
+        <Link to="/dispatcher/predictions" className="rounded-xl border border-brand/25 bg-brand-soft p-4"><h2 className="font-semibold text-brand-ink">Review AI predictions →</h2><p className="mt-1 text-sm text-muted">Handling time, late-arrival risk, confidence and decisions for this run.</p></Link>
+        <Link to="/resilience" className="rounded-xl border border-attention/25 bg-attention-soft p-4"><h2 className="font-semibold text-attention-ink">Service & recovery →</h2><p className="mt-1 text-sm text-muted">Unavailable estimates, stale inputs, disconnected drivers and loading exceptions.</p></Link>
+      </div>
       <PageHeader
         eyebrow={`${greeting()}, ${user.name}`}
         title={`${user.depot} Operations`}

@@ -1,5 +1,5 @@
 import { DEPOTS, isReefer, isVan } from './seed'
-import { fmtMin, hm } from './time'
+import { fmtMin, hm, nextOperatingDate } from './time'
 import type { Brand, Minutes, Order, Outlet, Trip, Vehicle } from './types'
 
 export const TRIP_LIMIT_MIN = 270
@@ -127,7 +127,7 @@ export function weeklyFuel(vehicle: Vehicle, w: World, extraTrip?: { stops: stri
   return used
 }
 
-export type CheckKey = 'status' | 'weight' | 'volume' | 'temperature' | 'depot' | 'access' | 'district' | 'window' | 'fresh' | 'time' | 'fuel' | 'trips' | 'turnaround'
+export type CheckKey = 'status' | 'weight' | 'volume' | 'temperature' | 'depot' | 'access' | 'brand' | 'district' | 'window' | 'fresh' | 'time' | 'fuel' | 'trips' | 'turnaround'
 
 export interface Check {
   key: CheckKey
@@ -176,6 +176,7 @@ export function validate(order: Order, vehicle: Vehicle, w: World): Validation {
       blocking: true,
       detail: order.temp === 'CHILLED' ? (isReefer(vehicle.type) ? 'Reefer for chilled goods' : 'Chilled goods require a REEFER') : 'Ambient goods',
     },
+    { key: 'brand', label: 'Single brand per trip', ok: !existing || existing.brand === order.brand, blocking: true, detail: existing ? `Trip serves ${existing.brand}; order is ${order.brand}` : `New ${order.brand} trip` },
     { key: 'depot', label: 'Depot', ok: outlet.depot === vehicle.depot, blocking: true, detail: outlet.depot === vehicle.depot ? `${vehicle.depot}` : `Outlet served from ${outlet.depot}` },
     {
       key: 'access',
@@ -253,7 +254,7 @@ export function deferralReason(order: Order, w: World): string {
   return 'Capacity exhausted'
 }
 
-export const nextRecommendation = (o: Order) => `Tomorrow · Trip ${sessionOf(o.brand)}`
+export const nextRecommendation = (o: Order) => `${nextOperatingDate(o.deliveryDate)} · Trip ${sessionOf(o.brand)}`
 
 export const customerMessageFor = (reason: string) => {
   if (reason.startsWith('Refrigerated')) return 'Required refrigerated capacity was unavailable for this run. Your order has high priority for the next run.'

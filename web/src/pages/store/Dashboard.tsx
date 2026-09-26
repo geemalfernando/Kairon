@@ -1,3 +1,5 @@
+import { PredictionCard } from '../../components/PredictionCard'
+import { WorkflowEntry } from '../shared/Workflow'
 import { ArrowRight, Clock, PackagePlus, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -27,6 +29,7 @@ export function Dashboard() {
 
   return (
     <>
+      <WorkflowEntry />
       <PageHeader
         eyebrow={`${greeting()}, ${user.name}`}
         title={out.name}
@@ -53,6 +56,7 @@ export function Dashboard() {
                 ) : (
                   <>
                     <OrderSummary o={focus} />
+                    <PredictionCard orderId={focus.id} />
                     <LocationMap outlet={out} depot={out.depot} vehicle={['IN_TRANSIT', 'ARRIVED'].includes(focus.status) ? etaFor(d, focus)?.vehicle : undefined} className="h-56" />
                     <div className="text-sm text-muted">{unitsOf(focus)} units · {focus.items.map((i) => `${i.qty} ${i.name}`).join(' · ')}</div>
                     {focus.shortfall && (

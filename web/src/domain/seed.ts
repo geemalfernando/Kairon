@@ -1,4 +1,4 @@
-import { hm, isoDay } from './time'
+import { hm, isoDay, nextOperatingDate } from './time'
 import type { Brand, Depot, District, Order, OrderItem, Outlet, Temp, User, Vehicle, VehicleType } from './types'
 
 /** Deterministic RNG so every demo run starts from the same network. */
@@ -217,7 +217,7 @@ export function priorityOf(o: Outlet, temp: Temp) {
 
 export function buildOrders(outlets: Outlet[]): Order[] {
   const r = rng(47)
-  const date = isoDay(1)
+  const date = nextOperatingDate(isoDay())
   const now = Date.now()
   const orders: Order[] = []
   let n = 1400

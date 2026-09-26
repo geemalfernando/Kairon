@@ -1,3 +1,5 @@
+import { OfflineWorkspace } from '../OfflineWorkspace'
+import { PredictionStatus } from '../PredictionStatus'
 import { Copyright } from '../Copyright'
 import { Bell, ChevronRight, CloudOff, LogOut, Menu, Moon, RefreshCw, Search, Sun, SunMoon, TriangleAlert, User as UserIcon, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -27,6 +29,7 @@ function useBadges(role: Role) {
 }
 
 export function AppShell() {
+  const connection = useNetwork()
   const user = useSession((s) => s.user)!
   const nav = NAV[user.role]
   const [notifOpen, setNotifOpen] = useState(false)
@@ -57,8 +60,9 @@ export function AppShell() {
       <div className="flex min-w-0 flex-col">
         <TopBar user={user} onSearch={() => setSearchOpen(true)} onNotifications={() => setNotifOpen(true)} />
         <ConnectivityStrip role={user.role} />
+        <PredictionStatus />
         <main className={cn('mx-auto w-full flex-1 px-4 pb-8 pt-6 sm:px-6 lg:px-8 lg:pb-12', field ? 'max-w-3xl lg:max-w-5xl' : 'max-w-[1440px]')}>
-          <Outlet />
+          {!connection.online && !field && !['/resilience', '/workflow', '/profile'].includes(loc.pathname) ? <OfflineWorkspace /> : <Outlet />}
         </main>
         <footer className="border-t border-line px-4 pt-5 pb-[calc(6rem+env(safe-area-inset-bottom))] text-center text-xs text-muted lg:pb-5">
           <Copyright />

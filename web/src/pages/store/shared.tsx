@@ -2,7 +2,7 @@ import { CalendarClock, Check, PackageCheck } from 'lucide-react'
 import { useState } from 'react'
 import { PhotoCapture } from '../../components/ProofCapture'
 import { Badge, Button, Callout, ChoiceList, Field, Input, Modal, Textarea, Timeline, toast } from '../../components/ui'
-import { fmtClock, fmtDate, fmtMin, fmtWindow } from '../../domain/time'
+import { fmtClock, fmtDate, fmtMin, fmtWindow, nextOperatingDate } from '../../domain/time'
 import type { Order } from '../../domain/types'
 import { outletOf, scheduleOf, tripOf, unitsOf } from '../../lib/select'
 import { ops, useOps } from '../../store'
@@ -34,8 +34,7 @@ export function etaFor(d: OpsData, o: Order) {
 }
 
 export function RescheduledCard({ o }: { o: Order }) {
-  const next = new Date(o.deliveryDate)
-  next.setDate(next.getDate() + 1)
+  const next = nextOperatingDate(o.deliveryDate)
   return (
     <div className="rounded-2xl border border-attention/50 bg-attention-soft p-5">
       <div className="flex items-center gap-2 text-attention-ink">

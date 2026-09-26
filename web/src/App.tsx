@@ -1,3 +1,6 @@
+import { Predictions } from './pages/dispatcher/Predictions'
+import { Workflow } from './pages/shared/Workflow'
+import { Resilience } from './pages/shared/Resilience'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/shell/AppShell'
 import { HOME } from './components/shell/nav'
@@ -32,6 +35,8 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route element={<RequireRole />}>
           <Route element={<AppShell />}>
+            <Route path="/workflow" element={<Workflow />} />
+            <Route path="/resilience" element={<Resilience />} />
             <Route path="/profile" element={<Profile />} />
 
             <Route element={<RequireRole role="DISPATCHER" />}>
@@ -48,6 +53,7 @@ export default function App() {
               <Route path="/dispatcher/issues" element={<Dispatcher.Issues />} />
               <Route path="/dispatcher/issues/:id" element={<Dispatcher.IssueDetail />} />
               <Route path="/dispatcher/deferred" element={<Dispatcher.Deferred />} />
+              <Route path="/dispatcher/predictions" element={<Predictions />} />
               <Route path="/dispatcher/capacity" element={<Dispatcher.Capacity />} />
               <Route path="/dispatcher/simulator" element={<Dispatcher.Simulator />} />
               <Route path="/dispatcher/history" element={<Dispatcher.History />} />

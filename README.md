@@ -1,5 +1,5 @@
 # Kairon
-AI-powered real-time last-mile delivery incident management platform that detects delays, analyzes evidence, identifies fault fairly, prevents refund abuse, and automates resolutions
+Delivery planning and operations frontend for Waypoint Group, connecting ordering, allocation, loading, delivery and receipt, with explainable demo predictions and failure recovery.
 
 ## Frontend (`web/`)
 
@@ -24,6 +24,18 @@ Sign in with a demo account (password `kairon-demo`) or use the one-tap **Demo a
 **One shared operation.** All roles read and write a single operational state (`src/store`). It is persisted locally and synced across browser tabs, so a dispatcher in one tab and a driver in another see each other's decisions live. Field actions (loading counts, arrivals, deliveries, proof, vehicle issues) are recorded as events. Offline, they queue on the device and replay on reconnect, with route-conflict detection.
 
 **Demo controls** (bottom-left "Demo" pill, presenter-only): close orders and plan, publish, dispatch the fleet, simulate offline for one tab, simulate failing photo uploads, switch roles and reset.
+
+### Complete workflow, predictions and failure recovery
+
+Every role has **Full workflow** and **Service & recovery** navigation. Dispatchers also have **AI predictions** and an expanded **Capacity forecast** covering both depots and all three brands. Estimates are explicitly labelled demo rules, not a trained model. Reviews and capacity proposals are saved to the shared audit history.
+
+Follow the [numbered four-role judge walkthrough and screen rationale](docs/frontend-flows.md#numbered-judge-walkthrough), including offline delivery, proof retry, loading shortfalls, stale predictions and receipt discrepancies. The same document records forecast assumptions and the remaining backend/model integration work.
+
+```sh
+cd web
+npm test        # prediction, forecast, cutoff and cross-role event checks (Node 24 recommended)
+npm run build   # TypeScript and production/PWA build
+```
 
 Layout:
 

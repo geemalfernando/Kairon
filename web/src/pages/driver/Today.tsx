@@ -1,3 +1,4 @@
+import { WorkflowEntry } from '../shared/Workflow'
 import { Check, CloudDownload, Navigation, ShieldAlert, Snowflake, Truck } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Badge, Button, Callout, Card, CheckRow, EmptyState, toast } from '../../components/ui'
@@ -16,6 +17,7 @@ export function Today() {
 
   return (
     <div className="mx-auto max-w-xl">
+      <WorkflowEntry />
       <div className="eyebrow">{greeting()}, {user.name}</div>
       <div className="mt-1 flex items-center gap-2">
         <h1 className="id text-3xl">{vehicle.id}</h1>

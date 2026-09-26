@@ -1,3 +1,4 @@
+import { PredictionCard } from '../../components/PredictionCard'
 import { ArrowLeft, Check, CheckCircle2, CloudOff, MapPin, Phone, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -67,6 +68,8 @@ export function Stop() {
       <div className="eyebrow">Stop {idx + 1} of {stops.length}</div>
       <h1 className="id mt-1 text-4xl">{outlet.id}</h1>
       <p className="text-muted">{outlet.name} · {outlet.district}</p>
+
+      {!isDone(o) && <PredictionCard orderId={o.id} />}
 
       {reassigned && <Callout tone="warning" title="This stop was reassigned" className="mt-4">The dispatcher moved it to another vehicle. Any delivery you already recorded is kept.</Callout>}
 

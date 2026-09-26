@@ -1,3 +1,4 @@
+import { WorkflowEntry } from '../shared/Workflow'
 import { ArrowDown, ArrowLeft, Check, ChevronRight, CloudOff, Minus, Package, PackageCheck, Plus, Snowflake, TriangleAlert } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
@@ -7,13 +8,13 @@ import { RouteMap } from '../../components/RouteMap'
 import { Badge, Button, Callout, Card, CardHeader, ChoiceList, cn, EmptyState, Modal, PageHeader, Segmented, SeverityBadge, Stat, toast } from '../../components/ui'
 import { isReefer, vehicleLabel } from '../../domain/seed'
 import { fmtMin, greeting, timeAgo } from '../../domain/time'
-import type { Order, Trip } from '../../domain/types'
+import type { Depot, Order, Trip } from '../../domain/types'
 import { orderOf, outletOf, vehicleOf } from '../../lib/select'
 import { useDevice, useNetwork, useSession, useView } from '../../store'
 import type { OpsData } from '../../store/events'
 import { tripLabel, tripTone } from '../dispatcher/Routes'
 
-const loaderTrips = (d: OpsData) => d.trips.filter((t) => !['DRAFT', 'ABORTED'].includes(t.status) && t.stops.length).sort((a, b) => a.departure - b.departure || a.vehicleId.localeCompare(b.vehicleId))
+const loaderTrips = (d: OpsData, depot: Depot) => d.trips.filter((t) => d.vehicles.find((v) => v.id === t.vehicleId)?.depot === depot && !['DRAFT', 'ABORTED'].includes(t.status) && t.stops.length).sort((a, b) => a.departure - b.departure || a.vehicleId.localeCompare(b.vehicleId))
 
 function NotReleased() {
   return (
@@ -30,13 +31,14 @@ function NotReleased() {
 export function Dashboard() {
   const d = useView()
   const user = useSession((s) => s.user)!
-  const trips = loaderTrips(d)
+  const trips = loaderTrips(d, user.depot)
   const ready = trips.filter((t) => t.status === 'PLANNED')
   const loading = trips.filter((t) => t.status === 'LOADING')
   const done = trips.filter((t) => ['LOADED', 'IN_PROGRESS', 'PAUSED', 'COMPLETED'].includes(t.status))
   const next = [...loading, ...ready].slice(0, 6)
   return (
     <>
+      <WorkflowEntry />
       <PageHeader eyebrow={greeting()} title={`${user.depot} loading bay`} subtitle={`${trips.length} trips today`} />
       {trips.length === 0 ? (
         <NotReleased />
@@ -89,9 +91,10 @@ function TripCard({ t }: { t: Trip }) {
 }
 
 export function Trips() {
+  const depot = useSession((s) => s.user!.depot)
   const d = useView()
   const [f, setF] = useState<'todo' | 'done' | 'all'>('todo')
-  const trips = loaderTrips(d).filter((t) => (f === 'todo' ? ['PLANNED', 'LOADING'].includes(t.status) : f === 'done' ? !['PLANNED', 'LOADING'].includes(t.status) : true))
+  const trips = loaderTrips(d, depot).filter((t) => (f === 'todo' ? ['PLANNED', 'LOADING'].includes(t.status) : f === 'done' ? !['PLANNED', 'LOADING'].includes(t.status) : true))
   return (
     <>
       <PageHeader
@@ -109,7 +112,7 @@ export function Trips() {
           />
         }
       />
-      {loaderTrips(d).length === 0 ? (
+      {loaderTrips(d, depot).length === 0 ? (
         <NotReleased />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
@@ -123,11 +126,12 @@ export function Trips() {
 }
 
 export function Load() {
+  const depot = useSession((s) => s.user!.depot)
   const { tripId } = useParams()
   const d = useView()
   const record = useDevice((s) => s.record)
   const net = useNetwork()
-  const t = d.trips.find((x) => x.id === tripId)
+  const t = d.trips.find((x) => x.id === tripId && d.vehicles.find((v) => v.id === x.vehicleId)?.depot === depot)
   const [open, setOpen] = useState<string | null>(null)
   const [short, setShort] = useState<{ o: Order; item: string; available: number } | null>(null)
 
@@ -136,7 +140,8 @@ export function Load() {
   const orders = t.stops.map((id) => orderOf(d, id)!).filter(Boolean)
   const loadOrder = [...orders].reverse() // last stop goes in first
   const confirmedCount = orders.filter((o) => isOrderConfirmed(o)).length
-  const canComplete = confirmedCount === orders.length && t.status === 'LOADING'
+  const blockedShortfalls = orders.filter((o) => o.shortfall && !o.shortfall.decision)
+  const canComplete = orders.length > 0 && confirmedCount === orders.length && !blockedShortfalls.length && t.status === 'LOADING'
   const current = open ?? loadOrder.find((o) => !isOrderConfirmed(o))?.id ?? null
   const shortIssue = (o: Order) => d.issues.find((i) => i.kind === 'SHORTFALL' && i.orderIds?.includes(o.id))
 
@@ -235,6 +240,7 @@ export function Load() {
           <RouteMap className="h-72" routes={[{ id: t.id, depot: v.depot, stops: orders.map((o) => ({ outlet: outletOf(d, o.outletId)!, state: 'todo' as const })) }]} />
         </div>
       </Card>
+      {blockedShortfalls.length > 0 && <Callout tone="warning" title="Waiting for a shortfall decision" className="mt-4">{blockedShortfalls.length} orders need dispatcher review. Counts are saved; departure stays blocked until the shortfall is resolved. <Link to="/loader/issues" className="underline">View loading issues</Link></Callout>}
       {short && <ShortfallModal {...short} onClose={() => setShort(null)} />}
     </>
   )
@@ -293,7 +299,7 @@ function OrderLoader({ o, stop, issue, onShort, onConfirmed }: { o: Order; stop:
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-3">
                 <div className={cn('h-full rounded-full transition-all', full ? 'bg-success' : 'bg-brand')} style={{ width: `${(c / i.qty) * 100}%` }} />
               </div>
-              {!full && c > 0 && o.shortfall?.item !== i.name && (
+              {!full && o.shortfall?.item !== i.name && (
                 <button onClick={() => onShort(i.name, c)} className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-attention-ink">
                   <TriangleAlert className="size-4" /> {i.qty - c} missing — report shortfall
                 </button>

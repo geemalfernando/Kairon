@@ -142,12 +142,14 @@ export const useDevice = create<DeviceStore>()(
           const user = useSession.getState().user
           if (!user) return
           const q: QueuedEvent = { id: uid('evt'), at: Date.now(), actor: user.role, event, status: 'pending' }
-          if (isOnline() && !get().syncing) {
+          const interruptedProof = event.type === 'PROOF' && !!event.photo && get().flakyUploads
+          if (isOnline() && !get().syncing && !interruptedProof) {
             useOps.getState().run((d) => applyEvent(d, q))
             patch(() => ({ lastSync: Date.now() }))
           } else {
             if (!get().box().snapshot) get().takeSnapshot()
             patch((b) => ({ queue: [...b.queue, q] }))
+            if (interruptedProof && isOnline()) void get().sync()
           }
         },
         takeSnapshot() {

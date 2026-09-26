@@ -1,5 +1,8 @@
 import {
   AlertTriangle,
+  BrainCircuit,
+  Workflow,
+  ShieldCheck,
   CalendarClock,
   ClipboardList,
   Columns3,
@@ -56,6 +59,7 @@ export const NAV: Record<Role, { sections: NavSection[]; bottom: string[] }> = {
       {
         title: 'Planning',
         items: [
+          { to: '/dispatcher/predictions', label: 'AI predictions', icon: BrainCircuit },
           { to: '/dispatcher/capacity', label: 'Capacity forecast', icon: TrendingUp },
           { to: '/dispatcher/simulator', label: 'What-if simulator', icon: FlaskConical },
         ],
@@ -112,6 +116,13 @@ export const NAV: Record<Role, { sections: NavSection[]; bottom: string[] }> = {
     ],
     bottom: ['/store', '/store/orders', '/store/orders/new', '/store/deliveries'],
   },
+}
+
+for (const role of Object.keys(NAV) as Role[]) {
+  NAV[role].sections.push({ title: 'Guidance', items: [
+    { to: '/workflow', label: 'Full workflow', icon: Workflow },
+    { to: '/resilience', label: 'Service & recovery', icon: ShieldCheck },
+  ] })
 }
 
 export const HOME: Record<Role, string> = {

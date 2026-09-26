@@ -17,10 +17,27 @@ export function fmtDate(d: Date | string, opts: Intl.DateTimeFormatOptions = { d
   return new Date(d).toLocaleDateString('en-GB', opts)
 }
 
-export function isoDay(offset = 0): string {
-  const d = new Date()
-  d.setDate(d.getDate() + offset)
-  return d.toISOString().slice(0, 10)
+/** Civil dates in the operation's Asia/Colombo timezone, independent of the viewer. */
+export function isoDay(offset = 0, now = new Date()): string {
+  const local = new Date(now.getTime() + 330 * 60000)
+  local.setUTCDate(local.getUTCDate() + offset)
+  return local.toISOString().slice(0, 10)
+}
+
+export function nextOperatingDate(date: string, offset = 1): string {
+  const day = new Date(date + 'T00:00:00Z')
+  day.setUTCDate(day.getUTCDate() + offset)
+  while (day.getUTCDay() === 0) day.setUTCDate(day.getUTCDate() + 1)
+  return day.toISOString().slice(0, 10)
+}
+
+export function orderCutoff(now = new Date()) {
+  const local = new Date(now.getTime() + 330 * 60000)
+  const minutes = local.getUTCHours() * 60 + local.getUTCMinutes()
+  const passed = minutes >= 16 * 60
+  const remainingMs = Math.max(0, ((16 * 60 - minutes) * 60 - local.getUTCSeconds()) * 1000)
+  const next = nextOperatingDate(isoDay(0, now))
+  return { passed, remainingMs, deliveryDate: passed ? nextOperatingDate(next) : next }
 }
 
 export function timeAgo(ts: number): string {

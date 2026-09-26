@@ -1,10 +1,12 @@
+import { newIntelligence, type IntelligenceState, type PredictionMode } from '../domain/intelligence'
 import { byId, customerMessageFor, generatePlan, nextRecommendation, recoveryPlan, sequence, validate } from '../domain/rules'
 import { buildOrders, buildOutlets, buildVehicles, measure, priorityOf, tempOf } from '../domain/seed'
-import { fmtClock, isoDay } from '../domain/time'
+import { fmtClock, isoDay, nextOperatingDate } from '../domain/time'
 import type { AuditEvent, DeliveryRecord, Issue, IssueKind, Notification, Order, OrderItem, Outlet, Receipt, Role, Severity, Trip, Vehicle } from '../domain/types'
 
 /** The single operational state every role looks at. */
 export interface OpsData {
+  intelligence?: IntelligenceState
   orders: Order[]
   outlets: Outlet[]
   vehicles: Vehicle[]
@@ -22,6 +24,7 @@ export function seedOps(): OpsData {
   const orders = buildOrders(outlets)
   return {
     outlets,
+    intelligence: newIntelligence(),
     vehicles: buildVehicles(),
     orders,
     trips: [],
@@ -33,7 +36,7 @@ export function seedOps(): OpsData {
     ]),
     ordersClosed: false,
     plan: 'NONE',
-    deliveryDate: isoDay(1),
+    deliveryDate: nextOperatingDate(isoDay()),
   }
 }
 
@@ -147,7 +150,9 @@ export function applyEvent(d: OpsData, q: Pick<QueuedEvent, 'actor' | 'event' | 
     }
     case 'LOAD_COMPLETE': {
       const t = tripOf(d, e.tripId)
-      if (!t) return
+      if (!t || t.status !== 'LOADING' || !t.stops.length) return
+      const orders = t.stops.map((id) => byId(d.orders, id))
+      if (orders.some((o) => !o || !o.loaded || o.items.some((item) => o.loaded![item.name] === undefined) || (o.shortfall && !o.shortfall.decision))) return
       t.status = 'LOADED'
       for (const id of t.stops) {
         const o = byId(d.orders, id)
@@ -162,7 +167,7 @@ export function applyEvent(d: OpsData, q: Pick<QueuedEvent, 'actor' | 'event' | 
     }
     case 'START_ROUTE': {
       const t = tripOf(d, e.tripId)
-      if (!t) return
+      if (!t || t.status !== 'LOADED') return
       t.status = 'IN_PROGRESS'
       t.startedAt = q.at
       for (const id of t.stops) {
@@ -250,6 +255,24 @@ export function applyEvent(d: OpsData, q: Pick<QueuedEvent, 'actor' | 'event' | 
 // ---------- dispatcher & store commands (always online) ----------
 
 export const commands = {
+  predictionMode(d: OpsData, mode: PredictionMode) {
+    d.intelligence ??= newIntelligence()
+    d.intelligence.mode = mode
+    d.intelligence.updatedAt = Date.now() - (mode === 'STALE' ? 48 * 3600000 : 0)
+    log(d, 'PREDICTIONS', 'DISPATCHER', `Demo prediction scenario: ${mode}`)
+  },
+  reviewPrediction(d: OpsData, orderId: string, note: string) {
+    if (!note.trim() || !d.orders.some((o) => o.id === orderId)) return
+    d.intelligence ??= newIntelligence()
+    d.intelligence.reviews = [...d.intelligence.reviews.filter((r) => r.orderId !== orderId), { orderId, note: note.trim(), at: Date.now() }]
+    log(d, orderId, 'DISPATCHER', `Prediction reviewed: ${note.trim()}`)
+  },
+  capacityProposal(d: OpsData, plan: Omit<IntelligenceState['capacityPlans'][number], 'id' | 'at'>) {
+    if (!plan.note.trim() || !Number.isInteger(plan.extraVehicles) || plan.extraVehicles < 1 || plan.extraVehicles > 60) return
+    d.intelligence ??= newIntelligence()
+    d.intelligence.capacityPlans.push({ ...plan, id: uid('capacity'), at: Date.now() })
+    log(d, 'CAPACITY', 'DISPATCHER', `Capacity proposal: ${plan.depot} / ${plan.brand} / ${plan.week}: ${plan.extraVehicles} ${plan.refrigerated ? 'refrigerated' : 'dry'} vehicles and drivers requested. ${plan.note}`)
+  },
   createOrder(d: OpsData, outletId: string, items: OrderItem[], notes: string, date: string) {
     const out = byId(d.outlets, outletId)!
     const clean = items.filter((i) => i.qty > 0)

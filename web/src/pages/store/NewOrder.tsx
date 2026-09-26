@@ -3,28 +3,23 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Button, Card, CardHeader, Field, PageHeader, Textarea, toast } from '../../components/ui'
 import { catalogFor, measure, tempOf } from '../../domain/seed'
-import { fmtDate } from '../../domain/time'
+import { fmtDate, orderCutoff } from '../../domain/time'
 import type { OrderItem } from '../../domain/types'
 import { outletOf } from '../../lib/select'
 import { ops, useOps, useSession } from '../../store'
 
-/** Countdown to today's 16:00 cutoff; after it, orders roll to the day after tomorrow. */
+/** Sri Lanka 16:00 cutoff; late orders wait for the following operating run. */
 export function useCutoff() {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(t)
   }, [])
-  const cutoff = new Date(now)
-  cutoff.setHours(16, 0, 0, 0)
-  const passed = now >= cutoff
-  const ms = Math.max(0, cutoff.getTime() - now.getTime())
+  const { passed, remainingMs: ms, deliveryDate } = orderCutoff(now)
   const hh = Math.floor(ms / 3.6e6)
   const mm = Math.floor((ms % 3.6e6) / 6e4)
   const ss = Math.floor((ms % 6e4) / 1000)
-  const deliveryDate = new Date(now)
-  deliveryDate.setDate(deliveryDate.getDate() + (passed ? 2 : 1))
-  return { passed, label: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`, deliveryDate: deliveryDate.toISOString().slice(0, 10), urgent: !passed && ms < 3.6e6 }
+  return { passed, label: `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`, deliveryDate, urgent: !passed && ms < 3.6e6 }
 }
 
 export function NewOrder() {
