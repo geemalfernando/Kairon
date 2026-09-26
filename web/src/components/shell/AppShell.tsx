@@ -11,6 +11,7 @@ import { InstallPrompt } from '../Pwa'
 import { Badge, cn, IconButton, Logo, severityTone, toast, toneDot } from '../ui'
 import { ConflictModal } from './ConflictModal'
 import { DemoDock } from './DemoDock'
+import { useDeskWatcher } from '../../store/desk'
 import { HOME, NAV, ROLE_LABEL, type NavItem } from './nav'
 import { SearchDialog } from './SearchDialog'
 
@@ -25,6 +26,7 @@ function useBadges(role: Role) {
     issues: role === 'DISPATCHER' ? d.issues.filter((i) => !i.resolved).length : role === 'LOADER' ? d.issues.filter((i) => !i.resolved && i.kind === 'SHORTFALL').length : 0,
     deferred: d.orders.filter((o) => o.status === 'DEFERRED' && !o.deferral?.confirmed).length,
     sync: net.pending + net.failed,
+    incidents: role === 'DISPATCHER' ? (d.desk?.cases ?? []).filter((c) => c.state === 'REVIEW').length : 0,
   }
 }
 
@@ -38,6 +40,7 @@ export function AppShell() {
   const loc = useLocation()
   useEffect(() => setMoreOpen(false), [loc.pathname])
   useSyncToasts()
+  useDeskWatcher(user.role === 'DISPATCHER')
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -122,7 +125,7 @@ function Sidebar({ user }: { user: User }) {
                     <it.icon className="size-[18px] shrink-0" />
                     <span className="flex-1">{it.label}</span>
                     {it.badge && badges[it.badge] > 0 && (
-                      <Badge tone={it.badge === 'issues' ? 'critical' : it.badge === 'sync' ? 'info' : 'attention'} className="!px-1.5 !text-[10px]">
+                      <Badge tone={it.badge === 'issues' || it.badge === 'incidents' ? 'critical' : it.badge === 'sync' ? 'info' : 'attention'} className="!px-1.5 !text-[10px]">
                         {badges[it.badge]}
                       </Badge>
                     )}

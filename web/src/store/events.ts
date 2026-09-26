@@ -2,11 +2,14 @@ import { newIntelligence, type IntelligenceState, type PredictionMode } from '..
 import { byId, customerMessageFor, generatePlan, nextRecommendation, recoveryPlan, sequence, validate } from '../domain/rules'
 import { buildOrders, buildOutlets, buildVehicles, measure, priorityOf, tempOf } from '../domain/seed'
 import { fmtClock, isoDay, nextOperatingDate } from '../domain/time'
+import type { DeskState } from '../domain/incidents/types'
 import type { AuditEvent, DeliveryRecord, Issue, IssueKind, Notification, Order, OrderItem, Outlet, Receipt, Role, Severity, Trip, Vehicle } from '../domain/types'
 
 /** The single operational state every role looks at. */
 export interface OpsData {
   intelligence?: IntelligenceState
+  /** Live incident desk: watcher clock, cases, credits, zone notices and the local model. */
+  desk?: DeskState
   orders: Order[]
   outlets: Outlet[]
   vehicles: Vehicle[]
@@ -91,11 +94,11 @@ export function describeEvent(e: FieldEvent, d: OpsData): string {
 
 // ---------- helpers that mutate a draft ----------
 
-function log(d: OpsData, entity: string, actor: Role | 'SYSTEM', text: string, at = Date.now()) {
+export function log(d: OpsData, entity: string, actor: Role | 'SYSTEM', text: string, at = Date.now()) {
   d.audit.push({ id: uid('a'), entity, at, actor, text })
 }
 
-function notify(d: OpsData, n: Omit<Notification, 'id' | 'at' | 'readBy'>) {
+export function notify(d: OpsData, n: Omit<Notification, 'id' | 'at' | 'readBy'>) {
   d.notifications.unshift({ ...n, id: uid('n'), at: Date.now(), readBy: [] })
   if (d.notifications.length > 150) d.notifications.length = 150
 }

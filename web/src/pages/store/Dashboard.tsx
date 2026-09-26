@@ -4,6 +4,7 @@ import { ArrowRight, Clock, PackagePlus, TriangleAlert } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LocationMap } from '../../components/RouteMap'
+import { StoreDeskNotes } from '../../components/StoreDeskNotes'
 import { Button, Callout, Card, CardHeader, EmptyState, PageHeader, StatusBadge, Timeline } from '../../components/ui'
 import { fmtDate, fmtWindow, greeting } from '../../domain/time'
 import { outletOf, storeOrders, unitsOf } from '../../lib/select'
@@ -45,6 +46,9 @@ export function Dashboard() {
         }
       />
 
+      <div className="mb-6 empty:hidden">
+        <StoreDeskNotes d={d} outletId={out.id} />
+      </div>
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <Card>
           {focus ? (

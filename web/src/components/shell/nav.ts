@@ -1,5 +1,6 @@
 import {
   AlertTriangle,
+  Siren,
   BrainCircuit,
   Workflow,
   ShieldCheck,
@@ -26,7 +27,7 @@ export interface NavItem {
   to: string
   label: string
   icon: LucideIcon
-  badge?: 'issues' | 'deferred' | 'sync'
+  badge?: 'issues' | 'deferred' | 'sync' | 'incidents'
   end?: boolean
 }
 export interface NavSection {
@@ -52,6 +53,7 @@ export const NAV: Record<Role, { sections: NavSection[]; bottom: string[] }> = {
         title: 'Monitoring',
         items: [
           { to: '/dispatcher/live', label: 'Live operations', icon: Radar },
+          { to: '/dispatcher/incidents', label: 'Incident desk', icon: Siren, badge: 'incidents' },
           { to: '/dispatcher/issues', label: 'Issues', icon: AlertTriangle, badge: 'issues' },
           { to: '/dispatcher/deferred', label: 'Deferred orders', icon: CalendarClock, badge: 'deferred' },
         ],

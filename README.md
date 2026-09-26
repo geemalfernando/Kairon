@@ -66,3 +66,16 @@ Demo accounts: `driver@kairon.demo` and `loader@kairon.demo`, password `kairon-d
 - **Offline-first:** each field action (arrival, delivery, proof photo or signature, loading counts, shortfalls, vehicle issues) is applied on the device and queued in an outbox that is persisted locally. On reconnect it replays against the server. If the dispatcher reassigned a stop meanwhile, a "Route updated" sheet explains it and completed deliveries are never lost. Failed uploads can be retried without redoing the delivery.
 - **UI:** an animated brand splash, a route map with a moving truck, slide-to-confirm for big actions, a success animation, crates that stack as the loader confirms stops, a live connectivity pill and banner, and light and dark themes. Fonts are bundled so everything renders without network.
 - **Backend:** `lib/data/api.dart` defines `KaironApi`. `MockKaironApi` simulates the server on the device (with latency) until the real API is available. The avatar menu has demo controls: simulate offline, flaky uploads, "loader finishes loading", "dispatcher reassigns a stop", and reset.
+
+## Incident desk (last-mile incident management)
+
+Dispatcher → **Incident desk** (`/dispatcher/incidents`). Press **Start live day**: the plan is published if needed and every vehicle except the hand-driven demo truck VEH014 goes out under watch. The operations clock runs at 1×, 2× or 5× and can be paused.
+
+1. **Watches live deliveries.** Every 1.5 s it reads each vehicle's GPS trail (one fix per minute) and live ETA.
+2. **Flags problems before stores complain:** projected to miss its window (including the Fresh 08:00 rule), stationary away from any stop, off the planned route, "delivered" outside the store's 150 m geofence, failed attempt, delivered short. Store claims are also taken in.
+3. **Assembles the case:** order and value, timestamps, the rider's GPS trail on a map, merchant details, and the store's credit history.
+4. **Runs five checks:** promise, GPS trail, proof of delivery, handover (loading and store readiness), and claim integrity.
+5. **Predicts responsibility** (rider, operations, merchant or external) with a multinomial logistic-regression model trained **locally in the browser**. It learns from labelled historical incidents, which are synthetic for the demo, plus every reviewer decision; **Model & rules → Retrain on this device** adds those decisions. The model card shows held-out accuracy and the confusion matrix.
+6. **Applies resolution rules** in order (R1–R6): integrity guard and confidence floor send the case to human review; external causes with 3+ late deliveries across 2+ vehicles get one **zone-wide delay notice**; rider or operations fault with real impact gets an **instant credit**; a closed store gets a re-attempt with no credit; in-flight lateness triggers an early warning to the store.
+
+The code is in `web/src/domain/incidents/`: `sim` (road simulation and GPS), `classifier`, `engine` (detectors, case file, checks, rules) and `types`. Stores see zone notices and automatic credits on their dashboard and order pages.

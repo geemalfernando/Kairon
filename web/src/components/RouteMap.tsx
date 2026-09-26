@@ -1,6 +1,6 @@
 import L from 'leaflet'
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
+import { Circle, CircleMarker, MapContainer, Marker, Polyline, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import { DEPOT_GEO, outletGeo, type LatLng } from '../domain/geo'
 import type { Brand, Depot, Outlet } from '../domain/types'
 import { cn } from './ui'
@@ -328,4 +328,62 @@ export function LocationMap({ outlet, depot, vehicle, className, interactive = f
 export function directionsUrl(o: Outlet) {
   const [lat, lng] = outletGeo(o)
   return `https://www.openstreetmap.org/directions?route=%3B${lat}%2C${lng}#map=15/${lat}/${lng}`
+}
+
+// ---------------------------------------------------------------------------
+// 4. Trail map — a rider's GPS trail against the plan, for incident evidence
+// ---------------------------------------------------------------------------
+
+export function TrailMap({
+  plan,
+  trail,
+  outlet,
+  depot,
+  deliveredAt,
+  stills = [],
+  className,
+}: {
+  plan: LatLng[]
+  trail: { lat: number; lng: number; t: number }[]
+  outlet: Outlet
+  depot: Depot
+  deliveredAt?: LatLng
+  stills?: { at: LatLng; label: string }[]
+  className?: string
+}) {
+  const here = outletGeo(outlet)
+  const pts: LatLng[] = trail.map((p) => [p.lat, p.lng])
+  const last = pts[pts.length - 1]
+  const fit = [...plan, ...pts, here]
+  return (
+    <BaseMap
+      className={className}
+      fit={fit}
+      maxZoom={15}
+      overlay={
+        <div className="pointer-events-none absolute bottom-7 left-3 z-[500] flex flex-wrap gap-x-3 gap-y-1 rounded-lg bg-surface/95 px-3 py-2 text-[11px] font-semibold text-ink shadow">
+          <span className="inline-flex items-center gap-1.5"><span className="h-0 w-5 border-t-2 border-dashed border-faint" /> Planned</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-1 w-5 rounded bg-info" /> GPS trail</span>
+          <span className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-full ring-2 ring-brand" /> 150 m store geofence</span>
+        </div>
+      }
+    >
+      <Polyline positions={plan} pathOptions={{ color: resolve('var(--faint)'), weight: 3, opacity: 0.8, dashArray: '6 7' }} />
+      <Polyline positions={pts} pathOptions={{ color: resolve('var(--info)'), weight: 4, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }} />
+      <Circle center={here} radius={150} pathOptions={{ color: resolve('var(--brand)'), weight: 2, fillColor: resolve('var(--brand)'), fillOpacity: 0.12 }} />
+      <Marker position={here} icon={pinIcon(outlet.id)} zIndexOffset={600} />
+      {stills.map((s, i) => (
+        <CircleMarker key={i} center={s.at} radius={9} pathOptions={{ color: resolve('var(--attention)'), weight: 3, fillColor: resolve('var(--attention)'), fillOpacity: 0.35 }}>
+          <Tooltip direction="top" permanent>{s.label}</Tooltip>
+        </CircleMarker>
+      ))}
+      {deliveredAt && (
+        <CircleMarker center={deliveredAt} radius={8} pathOptions={{ color: '#fff', weight: 3, fillColor: resolve('var(--critical)'), fillOpacity: 1 }}>
+          <Tooltip direction="bottom" permanent>Marked delivered here</Tooltip>
+        </CircleMarker>
+      )}
+      {last && <Marker position={last} icon={vehicleIcon('now')} zIndexOffset={900} />}
+      <DepotMarkers depots={[depot]} />
+    </BaseMap>
+  )
 }

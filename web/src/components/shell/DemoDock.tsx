@@ -4,12 +4,15 @@ import { useNavigate } from 'react-router-dom'
 import type { Role } from '../../domain/types'
 import { demoUser, ops, resetDemo, useDevice, useOps, useSession } from '../../store'
 import { Badge, Button, cn, IconButton, toast } from '../ui'
+import { startLiveDay } from '../../domain/incidents/engine'
+import { desk } from '../../store/desk'
 import { HOME, ROLE_LABEL } from './nav'
 
 /** Demo-only tools for judges. Clearly separated from the product UI. */
 export function DemoDock() {
   const [open, setOpen] = useState(false)
   const plan = useOps((s) => s.data.plan)
+  const liveWatch = useOps((s) => !!s.data.desk?.live.startedAt)
   const closed = useOps((s) => s.data.ordersClosed)
   const simOff = useSession((s) => s.simulateOffline)
   const setOff = useSession((s) => s.setSimulateOffline)
@@ -71,9 +74,17 @@ export function DemoDock() {
                   Publish plan to loaders & drivers
                 </Button>
               )}
-              {plan === 'PUBLISHED' && (
-                <Button size="sm" variant="secondary" onClick={() => (ops('simulateFleet', 'VEH014'), toast('Fleet dispatched', { body: 'Other vehicles are now on the road' }))}>
-                  Send the rest of the fleet out
+              {!liveWatch && (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    desk((d) => startLiveDay(d))
+                    toast('Live day started', { body: 'The incident desk is watching every vehicle' })
+                    navigate('/dispatcher/incidents')
+                    setOpen(false)
+                  }}
+                >
+                  Start live day with incident watch
                 </Button>
               )}
             </div>

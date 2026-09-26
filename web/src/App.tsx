@@ -50,6 +50,9 @@ export default function App() {
               <Route path="/dispatcher/vehicles/:id" element={<Dispatcher.VehicleDetail />} />
               <Route path="/dispatcher/outlets" element={<Dispatcher.Outlets />} />
               <Route path="/dispatcher/live" element={<Dispatcher.Live />} />
+              <Route path="/dispatcher/incidents" element={<Dispatcher.Incidents />} />
+              <Route path="/dispatcher/incidents/model" element={<Dispatcher.IncidentModel />} />
+              <Route path="/dispatcher/incidents/:id" element={<Dispatcher.IncidentCaseView />} />
               <Route path="/dispatcher/issues" element={<Dispatcher.Issues />} />
               <Route path="/dispatcher/issues/:id" element={<Dispatcher.IssueDetail />} />
               <Route path="/dispatcher/deferred" element={<Dispatcher.Deferred />} />
